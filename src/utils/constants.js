@@ -1,32 +1,23 @@
-// Estados CRM con colores
+// Estados CRM con colores — ajustar según el CRM del cliente
 export const CRM_STATES = {
-  'Nuevo Lead': { color: 'bg-blue-100 text-blue-800', priority: 1 },
-  'En Conversación': { color: 'bg-indigo-100 text-indigo-800', priority: 2 },
-  'Precalificado': { color: 'bg-purple-100 text-purple-800', priority: 3 },
-  'Descalificado': { color: 'bg-gray-100 text-gray-800', priority: 99 },
-  'Link Enviado': { color: 'bg-cyan-100 text-cyan-800', priority: 4 },
-  'Agendado': { color: 'bg-teal-100 text-teal-800', priority: 5 },
-  'Asistió': { color: 'bg-green-100 text-green-800', priority: 6 },
-  'No Asistió': { color: 'bg-orange-100 text-orange-800', priority: 98 },
-  'Compró': { color: 'bg-emerald-100 text-emerald-800', priority: 7 },
-  'No Compró': { color: 'bg-red-100 text-red-800', priority: 97 },
-  'Cliente Activo': { color: 'bg-green-200 text-green-900', priority: 8 },
-  'Plan Terminado': { color: 'bg-slate-100 text-slate-800', priority: 9 },
-  'Recompró': { color: 'bg-emerald-200 text-emerald-900', priority: 10 },
-  'Canceló Cita': { color: 'bg-amber-100 text-amber-800', priority: 96 },
-  'Requiere Humano': { color: 'bg-red-200 text-red-900', priority: 0 },
+  'Nuevo Lead':       { color: 'bg-blue-500/20 text-blue-400',    priority: 1 },
+  'En Conversación':  { color: 'bg-indigo-500/20 text-indigo-400', priority: 2 },
+  'Precalificado':    { color: 'bg-purple-500/20 text-purple-400', priority: 3 },
+  'Descalificado':    { color: 'bg-dark-600 text-dark-400',        priority: 99 },
+  'Link Enviado':     { color: 'bg-cyan-500/20 text-cyan-400',     priority: 4 },
+  'Agendado':         { color: 'bg-teal-500/20 text-teal-400',     priority: 5 },
+  'Asistió':          { color: 'bg-green-500/20 text-green-400',   priority: 6 },
+  'No Asistió':       { color: 'bg-orange-500/20 text-orange-400', priority: 98 },
+  'Compró':           { color: 'bg-emerald-500/20 text-emerald-400', priority: 7 },
+  'No Compró':        { color: 'bg-red-500/20 text-red-400',       priority: 97 },
+  'Cliente Activo':   { color: 'bg-green-600/20 text-green-300',   priority: 8 },
+  'Plan Terminado':   { color: 'bg-dark-500/20 text-dark-400',     priority: 9 },
+  'Recompró':         { color: 'bg-emerald-600/20 text-emerald-300', priority: 10 },
+  'Canceló Cita':     { color: 'bg-amber-500/20 text-amber-400',   priority: 96 },
+  'Requiere Humano':  { color: 'bg-red-600/20 text-red-300',       priority: 0 },
 };
 
-// Estados de agendamiento
-export const SCHEDULING_STATES = {
-  'Pendiente': { color: 'bg-yellow-100 text-yellow-800' },
-  'Agendado': { color: 'bg-blue-100 text-blue-800' },
-  'Reprogramado': { color: 'bg-orange-100 text-orange-800' },
-  'Confirmado': { color: 'bg-green-100 text-green-800' },
-  'Cancelado': { color: 'bg-red-100 text-red-800' },
-};
-
-// Orden del funnel de conversión (sin "Nuevo Lead" porque pasan inmediatamente a "En Conversación")
+// Orden del funnel de conversión
 export const FUNNEL_ORDER = [
   'En Conversación',
   'Precalificado',
@@ -36,95 +27,73 @@ export const FUNNEL_ORDER = [
   'Compró',
 ];
 
-// Colores del tema
-export const COLORS = {
-  primary: '#2E7D32',
-  secondary: '#1565C0',
-  success: '#4CAF50',
-  warning: '#F57C00',
-  error: '#D32F2F',
-  background: '#FAFAFA',
-  card: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-};
-
-// Colores para gráficos
+// Paleta para gráficos — naranja como color primario
 export const CHART_COLORS = [
-  '#2E7D32', // primary green
-  '#1565C0', // secondary blue
-  '#7B1FA2', // purple
-  '#C62828', // red
-  '#EF6C00', // orange
-  '#00838F', // cyan
-  '#558B2F', // light green
-  '#4527A0', // deep purple
-  '#AD1457', // pink
-  '#00695C', // teal
+  '#F97316', // naranja (primario)
+  '#10B981', // verde
+  '#00D9FF', // cyan
+  '#B24BF3', // magenta
+  '#FFD93D', // amarillo
+  '#EF4444', // rojo
+  '#8B5CF6', // púrpura
+  '#EC4899', // pink
+  '#3B82F6', // azul
+  '#14B8A6', // teal
 ];
 
-// Opciones de filtro de fecha
+// Filtros de fecha disponibles
 export const DATE_FILTERS = [
-  { value: 'today', label: 'Hoy' },
-  { value: 'week', label: 'Esta Semana' },
-  { value: 'month', label: 'Este Mes' },
+  { value: 'today',  label: 'Hoy' },
+  { value: 'week',   label: 'Esta semana' },
+  { value: 'last7',  label: 'Últimos 7 días' },
+  { value: 'month',  label: 'Este mes' },
+  { value: 'last30', label: 'Últimos 30 días' },
   { value: 'custom', label: 'Personalizado' },
 ];
 
-// Opciones de paginación
 export const PAGE_SIZES = [10, 25, 50];
 
-// Zona horaria
-export const TIMEZONE = 'America/Lima';
-
-// Campos de la API
+// Nombres de campos NocoDB — ajustar si el cliente tiene nombres distintos
 export const LEAD_FIELDS = {
-  // Identificación
   id: 'Id',
   createdAt: 'CreatedAt',
   nombre: 'Nombre',
   phone: 'Phone',
   email: 'Email',
-  contactId: 'Contact ID',
-
-  // Estados
   estadoCRM: 'Estado CRM',
-  estadoAgendamiento: 'Estado Agendamiento',
-  calificado: '¿Calificado?',
-
-  // Ubicación
-  distritoResidencia: 'Distrito Residencia',
-  distritoTrabajo: 'Distrito Trabajo',
-  distritoCalificar: 'Distrito Usado Para Calificar',
-
-  // Citas
   fechaAgendamiento: 'Fecha de agendamiento',
-  horaCita: 'Hora Cita',
   confirmoCita: 'Confirmo Cita',
-  recordatorio24h: 'Recordatorio 24h Enviado',
-  recordatorio4h: 'Recordatorio 4h Enviado',
-
-  // Historial
-  noShows: 'N° No-Shows',
-  cancelaciones: 'N° Cancelaciones',
-  reprogramaciones: 'N° Reprogramaciones',
-  usoDiagnosticoGratis: 'Ya Usó Diagnóstico Gratis',
-  requiereRevision: 'Requiere revisión manual',
-
-  // Ventas
   montoVenta: 'Monto Venta Cerrada (PEN)',
-  planAdquirido: 'Plan Adquirido',
-
-  // Seguimiento
-  intentosSeguimiento: 'Intentos seguimiento',
-  fechaRetargeting: 'Fecha de último retargeting',
   origenLead: 'Origen del Lead',
-
-  // Razones
-  razonCalificacion: 'Razón Calificación',
-  razonDescalificacion: 'Razón Descalificación',
-
-  // Fechas
-  fechaCreacionLead: 'Fecha de creacion del lead',
+  requiereRevision: 'Requiere revisión manual',
   ultimaModificacion: 'Última Modificación',
+  tipoAtencion: 'Tipo Atención', // 'IA' | 'Manual' — puede no existir en todos los CRMs
 };
+
+// Modelos de IA disponibles en OpenRouter con precios por millón de tokens
+export const AI_MODELS = [
+  {
+    id: 'anthropic/claude-3-haiku',
+    name: 'Claude 3 Haiku (Recomendado)',
+    inputPricePerM: 0.25,
+    outputPricePerM: 1.25,
+  },
+  {
+    id: 'openai/gpt-4o-mini',
+    name: 'GPT-4o Mini',
+    inputPricePerM: 0.15,
+    outputPricePerM: 0.60,
+  },
+  {
+    id: 'google/gemini-flash-1.5',
+    name: 'Gemini Flash 1.5',
+    inputPricePerM: 0.075,
+    outputPricePerM: 0.30,
+  },
+  {
+    id: 'meta-llama/llama-3.1-8b-instruct:free',
+    name: 'Llama 3.1 8B (Gratis)',
+    inputPricePerM: 0,
+    outputPricePerM: 0,
+  },
+];

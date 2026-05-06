@@ -1,12 +1,10 @@
 import { useState, useRef } from 'react';
-import { RefreshCw, LogOut, Wifi, WifiOff, Calendar, X, Lock, FileDown, Loader2 } from 'lucide-react';
+import { RefreshCw, LogOut, Wifi, WifiOff, Calendar, X, Settings, FileDown, Loader2 } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button, Select } from './ui';
 import { formatDateTime } from '../utils/formatters';
-import { CLIENT_CONFIG } from '../config/client';
-
-const UPGRADE_URL = 'https://wa.link/su2ie7';
+import { useBusinessContext } from '../hooks/useBusinessContext';
 
 const DATE_FILTERS = [
   { value: 'today',  label: 'Hoy' },
@@ -54,7 +52,9 @@ export default function Header({
   lastUpdated,
   isOnline,
   onLogout,
+  onOpenSettings,
 }) {
+  const { businessContext } = useBusinessContext();
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [tempStartDate, setTempStartDate] = useState('');
   const [tempEndDate, setTempEndDate] = useState('');
@@ -178,25 +178,19 @@ export default function Header({
     }
   };
 
+  const displayName = businessContext?.businessName || 'Mi Dashboard';
+
   return (
-    <header className="bg-dark-800/80 backdrop-blur-md border-b border-dark-700 sticky top-0 z-40">
-      <div className="px-4 md:px-6 py-4">
+    <header className="bg-dark-800/90 backdrop-blur-md border-b border-dark-700 sticky top-0 z-40">
+      <div className="px-4 md:px-6 py-3.5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           {/* Logo y título */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent-cyan to-accent-magenta flex items-center justify-center text-2xl overflow-hidden shrink-0">
-              {CLIENT_CONFIG.logoUrl ? (
-                <img
-                  src={CLIENT_CONFIG.logoUrl}
-                  alt={CLIENT_CONFIG.name}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <span>{CLIENT_CONFIG.logo}</span>
-              )}
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent-orange to-accent-yellow flex items-center justify-center text-xl overflow-hidden shrink-0 shadow-glow-orange">
+              🟠
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-100">{CLIENT_CONFIG.name}</h1>
+              <h1 className="text-lg font-bold text-gray-100">{displayName}</h1>
               <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
                 {isOnline ? (
                   <span className="flex items-center gap-1 text-accent-green">
@@ -223,17 +217,6 @@ export default function Header({
 
           {/* Controles */}
           <div className="flex items-center gap-2 md:gap-3 flex-wrap no-print">
-            {/* PRO CTA */}
-            <a
-              href={UPGRADE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-accent-magenta/15 text-accent-magenta border border-accent-magenta/30 hover:bg-accent-magenta/25 transition-colors whitespace-nowrap"
-            >
-              <Lock className="w-3 h-3" />
-              Actualizar a PRO
-            </a>
-
             {/* Filtro de fecha */}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-gray-500" />
@@ -294,6 +277,12 @@ export default function Header({
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Actualizar</span>
+            </Button>
+
+            {/* Ajustes */}
+            <Button variant="secondary" onClick={onOpenSettings} title="Ajustes del dashboard">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Ajustes</span>
             </Button>
 
             {/* Salir */}

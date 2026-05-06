@@ -8,54 +8,38 @@ import {
   calculateAdvancedMetrics,
   generateAlerts,
   generateInsights,
+  calculateCAC,
+  calculateSourceDistribution,
+  calculateAIvsManual,
 } from '../utils/calculations';
 
-export function useStats(leads, dateFilter = 'month', customStart = null, customEnd = null) {
-  // Métricas principales
+export function useStats(leads, dateFilter = 'month', customStart = null, customEnd = null, businessContext = null) {
   const metrics = useMemo(() => {
-    return calculateMetrics(leads, dateFilter, customStart, customEnd);
-  }, [leads, dateFilter, customStart, customEnd]);
+    const base = calculateMetrics(leads, dateFilter, customStart, customEnd);
+    // Añadir CAC si hay ad spend configurado
+    const cac = calculateCAC(businessContext?.monthlyAdSpend, base.newLeads);
+    return { ...base, cac };
+  }, [leads, dateFilter, customStart, customEnd, businessContext]);
 
-  // Funnel acumulativo (tasas de conversión históricas)
-  const funnelData = useMemo(() => {
-    return calculateFunnel(leads);
-  }, [leads]);
+  const funnelData = useMemo(() => calculateFunnel(leads), [leads]);
+  const pipelineData = useMemo(() => calculatePipeline(leads), [leads]);
 
-  // Pipeline snapshot (dónde está cada lead hoy)
-  const pipelineData = useMemo(() => {
-    return calculatePipeline(leads);
-  }, [leads]);
-
-  // Distribuciones
-  const statusDistribution = useMemo(() => {
-    return calculateDistribution(leads, 'Estado CRM');
-  }, [leads]);
-
-  const districtDistribution = useMemo(() => {
-    return calculateDistribution(leads, 'Distrito Usado Para Calificar');
-  }, [leads]);
-
-  const originDistribution = useMemo(() => {
-    return calculateDistribution(leads, 'Origen del Lead');
-  }, [leads]);
+  const statusDistribution = useMemo(() => calculateDistribution(leads, 'Estado CRM'), [leads]);
+  const districtDistribution = useMemo(() => calculateDistribution(leads, 'Distrito Usado Para Calificar'), [leads]);
+  const originDistribution = useMemo(() => calculateSourceDistribution(leads), [leads]);
 
   const disqualificationReasons = useMemo(() => {
     const disqualified = leads.filter(l => l['Estado CRM'] === 'Descalificado');
     return calculateDistribution(disqualified, 'Razón Descalificación');
   }, [leads]);
 
-  // Tendencias
-  const leadsByDay = useMemo(() => {
-    return calculateLeadsByDay(leads, 30);
-  }, [leads]);
+  const leadsByDay = useMemo(() => calculateLeadsByDay(leads, 30), [leads]);
 
   const appointmentsByDay = useMemo(() => {
-    // Filtrar leads con citas y calcular por día
     const leadsWithAppointments = leads.filter(l => l['Fecha de agendamiento']);
     return calculateLeadsByDay(leadsWithAppointments, 30);
   }, [leads]);
 
-  // Ingresos por semana
   const revenueByWeek = useMemo(() => {
     const weeks = {};
     leads.forEach(lead => {
@@ -65,32 +49,20 @@ export function useStats(leads, dateFilter = 'month', customStart = null, custom
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay());
           const weekKey = weekStart.toISOString().split('T')[0];
-
           weeks[weekKey] = (weeks[weekKey] || 0) + parseFloat(lead['Monto Venta Cerrada (PEN)']);
-        } catch { }
+        } catch {}
       }
     });
-
     return Object.entries(weeks)
       .map(([week, revenue]) => ({ week, revenue }))
       .sort((a, b) => a.week.localeCompare(b.week))
-      .slice(-8); // Últimas 8 semanas
+      .slice(-8);
   }, [leads]);
 
-  // Métricas avanzadas
-  const advancedMetrics = useMemo(() => {
-    return calculateAdvancedMetrics(leads);
-  }, [leads]);
-
-  // Alertas
-  const alerts = useMemo(() => {
-    return generateAlerts(leads);
-  }, [leads]);
-
-  // Insights
-  const insights = useMemo(() => {
-    return generateInsights(leads, advancedMetrics);
-  }, [leads, advancedMetrics]);
+  const advancedMetrics = useMemo(() => calculateAdvancedMetrics(leads), [leads]);
+  const aiVsManual = useMemo(() => calculateAIvsManual(leads), [leads]);
+  const alerts = useMemo(() => generateAlerts(leads), [leads]);
+  const insights = useMemo(() => generateInsights(leads, advancedMetrics), [leads, advancedMetrics]);
 
   return {
     metrics,
@@ -104,6 +76,7 @@ export function useStats(leads, dateFilter = 'month', customStart = null, custom
     appointmentsByDay,
     revenueByWeek,
     advancedMetrics,
+    aiVsManual,
     alerts,
     insights,
   };

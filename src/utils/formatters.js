@@ -1,26 +1,22 @@
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { TIMEZONE } from './constants';
 
-/**
- * Formatear número con separadores de miles
- * 1000 -> 1,000
- */
+// Formateadores multi-cliente. La moneda y locale se pueden parametrizar
+// en el futuro desde businessContext — por ahora usan es-419 (español latino).
+
 export function formatNumber(value) {
   if (value === null || value === undefined) return '-';
-  return new Intl.NumberFormat('es-PE').format(value);
+  return new Intl.NumberFormat('es-419').format(value);
 }
 
-/**
- * Formatear moneda en Soles
- * 1500 -> S/ 1,500.00
- */
 export function formatCurrency(value) {
   if (value === null || value === undefined) return '-';
-  return new Intl.NumberFormat('es-PE', {
+  // USD por defecto — la moneda real depende del contexto del negocio
+  return new Intl.NumberFormat('es-419', {
     style: 'currency',
-    currency: 'PEN',
-    minimumFractionDigits: 2,
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
 }
 

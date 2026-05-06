@@ -1,6 +1,6 @@
-# NutraClínics Dashboard
+# Innovarketing Dashboard Pro
 
-Dashboard profesional para gestión de leads de NutraClínics, clínica nutricional en Lima, Perú.
+Dashboard B2B multi-cliente para gestión y análisis de leads desde NocoDB, con diagnóstico IA via OpenRouter. Desarrollado por [Innovarketing.com](https://innovarketing.com).
 
 ## Características
 
@@ -48,7 +48,7 @@ cp .env.example .env
 
 4. Configurar las variables de entorno en `.env`:
 ```env
-NOCODB_API_URL=https://crm.nutraclinic.pe/api/v2/tables/mpbgjqphs0yncva/records
+NOCODB_API_URL=https://tu-nocodb.com/api/v2/tables/TU_TABLE_ID/records
 NOCODB_API_TOKEN=tu_token_aqui
 DASHBOARD_PASSWORD=tu_contraseña_segura
 JWT_SECRET=secreto_aleatorio_32_caracteres
@@ -67,15 +67,15 @@ El frontend estará en `http://localhost:5173` y el backend en `http://localhost
 
 ```bash
 # Build
-docker build -t nutraclinics-dashboard .
+docker build -t innovarketing-dashboard-pro .
 
 # Ejecutar
 docker run -p 3000:3000 \
-  -e NOCODB_API_URL=https://crm.nutraclinic.pe/api/v2/tables/mpbgjqphs0yncva/records \
+  -e NOCODB_API_URL=https://tu-nocodb.com/api/v2/tables/TU_TABLE_ID/records \
   -e NOCODB_API_TOKEN=tu_token \
   -e DASHBOARD_PASSWORD=tu_contraseña \
   -e JWT_SECRET=tu_secreto \
-  nutraclinics-dashboard
+  innovarketing-dashboard-pro
 ```
 
 ### Despliegue en EasyPanel
@@ -158,4 +158,4 @@ Para reportar problemas o solicitar funcionalidades, crear un issue en el reposi
 
 ---
 
-Desarrollado para NutraClínics - Lima, Perú
+Desarrollado por Innovarketing.com

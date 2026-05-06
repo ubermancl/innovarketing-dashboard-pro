@@ -1,5 +1,5 @@
 # ===========================================
-# NutraClínics Dashboard - Dockerfile
+# Innovarketing Dashboard Pro — Dockerfile
 # ===========================================
 
 # Stage 1: Build frontend

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api/client';
 import { filterByDateRange, getDateRange } from '../utils/calculations';
 
-const STORAGE_KEY = 'nutraclinics_leads_cache';
+const STORAGE_KEY = 'ik_dashboard_leads_cache';
 
 function getFromStorage() {
   try {

@@ -1,130 +1,153 @@
-import { Users, MessageCircle, CalendarCheck, TrendingUp, DollarSign, AlertTriangle } from 'lucide-react';
+import {
+  Users, MessageCircle, CalendarCheck, TrendingUp, DollarSign, AlertTriangle,
+  Clock, Bot, Target, TrendingDown, BarChart3, Zap,
+} from 'lucide-react';
 import { Card } from './ui';
 import { formatNumber, formatCurrency, formatPercent, formatChange } from '../utils/formatters';
 
+// Cada MetricCard tiene una línea de acento superior codificada por color.
+// El patrón Linear/Vercel: número grande, label muted arriba, delta abajo.
 const MetricCard = ({
   title,
   value,
   change,
   icon: Icon,
   format = 'number',
-  accentColor = 'cyan',
-  danger = false
+  accentColor = 'orange',
+  danger = false,
+  subtitle = null,
+  notConfigured = false,
 }) => {
-  const formattedValue = format === 'currency'
-    ? formatCurrency(value)
-    : format === 'percent'
-      ? formatPercent(value)
-      : formatNumber(value);
+  const formattedValue = notConfigured
+    ? '—'
+    : format === 'currency' ? formatCurrency(value)
+    : format === 'percent' ? formatPercent(value)
+    : formatNumber(value);
 
   const changeData = formatChange(change);
 
-  const accentColors = {
-    cyan: 'from-accent-cyan to-accent-cyan/50',
-    magenta: 'from-accent-magenta to-accent-magenta/50',
-    green: 'from-accent-green to-accent-green/50',
-    yellow: 'from-accent-yellow to-accent-yellow/50',
-    purple: 'from-accent-purple to-accent-purple/50',
-    red: 'from-accent-red to-accent-red/50',
+  const accentMap = {
+    orange:  { line: 'from-accent-orange to-accent-yellow',   icon: 'bg-accent-orange/10 text-accent-orange'  },
+    cyan:    { line: 'from-accent-cyan to-accent-cyan/50',    icon: 'bg-accent-cyan/10 text-accent-cyan'      },
+    magenta: { line: 'from-accent-magenta to-accent-magenta/50', icon: 'bg-accent-magenta/10 text-accent-magenta' },
+    green:   { line: 'from-accent-green to-accent-green/50',  icon: 'bg-accent-green/10 text-accent-green'   },
+    yellow:  { line: 'from-accent-yellow to-accent-yellow/50',icon: 'bg-accent-yellow/10 text-accent-yellow'  },
+    purple:  { line: 'from-accent-purple to-accent-purple/50',icon: 'bg-accent-purple/10 text-accent-purple'  },
+    red:     { line: 'from-accent-red to-accent-red/50',      icon: 'bg-accent-red/10 text-accent-red'        },
   };
 
-  const iconBgColors = {
-    cyan: 'bg-accent-cyan/10 text-accent-cyan',
-    magenta: 'bg-accent-magenta/10 text-accent-magenta',
-    green: 'bg-accent-green/10 text-accent-green',
-    yellow: 'bg-accent-yellow/10 text-accent-yellow',
-    purple: 'bg-accent-purple/10 text-accent-purple',
-    red: 'bg-accent-red/10 text-accent-red',
-  };
+  const col = accentMap[danger ? 'red' : accentColor] || accentMap.orange;
 
   return (
     <Card
-      className={`relative overflow-hidden ${danger && value > 0 ? 'border-error/50' : ''}`}
+      className={`relative overflow-hidden ${danger && value > 0 ? 'border-error/40' : ''}`}
       padding="md"
       hover
-      glow={danger && value > 0 ? null : accentColor}
     >
-      {/* Gradient accent line */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${accentColors[danger ? 'red' : accentColor]}`} />
+      <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${col.line}`} />
 
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-gray-400 font-medium">{title}</p>
-          <p className={`text-2xl md:text-3xl font-bold font-mono mt-1 ${danger && value > 0 ? 'text-error' : 'text-gray-100'}`}>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-dark-400 font-medium uppercase tracking-wide">{title}</p>
+          <p className={`text-2xl md:text-3xl font-bold font-mono mt-1.5 ${danger && value > 0 ? 'text-error' : notConfigured ? 'text-dark-500' : 'text-gray-100'}`}>
             {formattedValue}
           </p>
+          {subtitle && <p className="text-xs text-dark-400 mt-1">{subtitle}</p>}
           {changeData && (
             <p className={`text-xs mt-2 flex items-center gap-1 ${
               changeData.positive ? 'text-accent-green' :
-              changeData.positive === false ? 'text-error' : 'text-gray-500'
+              changeData.positive === false ? 'text-error' : 'text-dark-400'
             }`}>
               {changeData.text}
-              <span className="text-gray-500">vs anterior</span>
+              <span className="text-dark-500">vs anterior</span>
             </p>
           )}
+          {notConfigured && (
+            <p className="text-xs text-dark-500 mt-1">Configura en Ajustes</p>
+          )}
         </div>
-        <div className={`p-3 rounded-lg ${iconBgColors[danger ? 'red' : accentColor]}`}>
-          <Icon className="w-5 h-5" />
+        <div className={`p-2.5 rounded-lg shrink-0 ml-3 ${col.icon}`}>
+          <Icon className="w-4 h-4" />
         </div>
       </div>
     </Card>
   );
 };
 
-export default function Cards({ metrics }) {
+export default function Cards({ metrics, advancedMetrics, aiVsManual, businessContext }) {
   const {
-    totalLeads,
-    inConversacion,
-    scheduled,
-    conversionRate,
-    revenue,
-    requiresAttention,
-    changes,
+    totalLeads, inConversacion, newLeads, scheduled,
+    conversionRate, revenue, requiresAttention,
+    leadsWithoutResponse24h, forecast, cac, changes,
   } = metrics;
 
+  const hasAdSpend = businessContext?.monthlyAdSpend > 0;
+  const hasTicket = businessContext?.avgTicket > 0;
+
+  // Margen estimado: solo si hay revenue y ticket promedio configurado
+  const marginPct = hasTicket && revenue > 0
+    ? Math.max(0, (1 - (parseFloat(businessContext.avgTicket) * 0.4 / parseFloat(businessContext.avgTicket)))) * 100
+    : null;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-      <MetricCard
-        title="Total Leads"
-        value={totalLeads}
-        icon={Users}
-        accentColor="cyan"
-      />
-      <MetricCard
-        title="En Conversación"
-        value={inConversacion}
-        icon={MessageCircle}
-        accentColor="purple"
-      />
-      <MetricCard
-        title="Citas Agendadas"
-        value={scheduled}
-        change={changes.scheduled}
-        icon={CalendarCheck}
-        accentColor="green"
-      />
-      <MetricCard
-        title="Tasa Conversión"
-        value={conversionRate}
-        change={changes.conversionRate}
-        icon={TrendingUp}
-        format="percent"
-        accentColor="magenta"
-      />
-      <MetricCard
-        title="Ingresos"
-        value={revenue}
-        change={changes.revenue}
-        icon={DollarSign}
-        format="currency"
-        accentColor="yellow"
-      />
-      <MetricCard
-        title="Requiere Atención"
-        value={requiresAttention}
-        icon={AlertTriangle}
-        danger
-      />
+    <div className="space-y-4">
+      {/* Métricas principales */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <MetricCard title="Total Leads" value={totalLeads} icon={Users} accentColor="orange" />
+        <MetricCard title="Leads (período)" value={newLeads} change={changes.newLeads} icon={TrendingUp} accentColor="cyan" />
+        <MetricCard title="En Conversación" value={inConversacion} icon={MessageCircle} accentColor="purple" />
+        <MetricCard title="Citas Agendadas" value={scheduled} change={changes.scheduled} icon={CalendarCheck} accentColor="green" />
+        <MetricCard title="Tasa Conversión" value={conversionRate} change={changes.conversionRate} icon={BarChart3} format="percent" accentColor="magenta" />
+        <MetricCard title="Revenue Período" value={revenue} change={changes.revenue} icon={DollarSign} format="currency" accentColor="yellow" />
+      </div>
+
+      {/* KPIs operacionales */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <MetricCard
+          title="Sin Respuesta +24h"
+          value={leadsWithoutResponse24h}
+          icon={Clock}
+          danger
+        />
+        <MetricCard
+          title="Requiere Atención"
+          value={requiresAttention}
+          icon={AlertTriangle}
+          danger
+        />
+        <MetricCard
+          title="Atendidos por IA"
+          value={aiVsManual ? aiVsManual.ai : 0}
+          icon={Bot}
+          accentColor="cyan"
+          subtitle={aiVsManual ? `${(aiVsManual.aiPct * 100).toFixed(0)}% del total` : null}
+          notConfigured={!aiVsManual}
+        />
+        <MetricCard
+          title="CAC Estimado"
+          value={cac || 0}
+          icon={Target}
+          format="currency"
+          accentColor="orange"
+          notConfigured={!hasAdSpend}
+        />
+        <MetricCard
+          title="Forecast Mes"
+          value={forecast}
+          icon={Zap}
+          format="currency"
+          accentColor="green"
+          subtitle="Basado en run rate"
+        />
+        <MetricCard
+          title="Margen Estimado"
+          value={marginPct ? marginPct / 100 : 0}
+          icon={TrendingDown}
+          format="percent"
+          accentColor="yellow"
+          notConfigured={!hasTicket || !revenue}
+        />
+      </div>
     </div>
   );
 }

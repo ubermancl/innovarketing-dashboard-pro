@@ -1,5 +1,5 @@
 import { parseISO, isValid, differenceInDays, differenceInHours, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, isWithinInterval } from 'date-fns';
-import { FUNNEL_ORDER, CRM_STATES } from './constants';
+import { FUNNEL_ORDER } from './constants';
 
 /**
  * Filtrar leads por rango de fecha
@@ -133,6 +133,24 @@ export function calculateMetrics(leads, dateFilter = 'month', customStart = null
     revenue: prevRevenue > 0 ? (revenue - prevRevenue) / prevRevenue : null,
   };
 
+  // Leads sin respuesta en las últimas 24h
+  const leadsWithoutResponse24h = leads.filter(lead => {
+    try {
+      const modified = parseISO(lead['Última Modificación'] || lead['CreatedAt']);
+      if (!isValid(modified)) return false;
+      const activeState = lead['Estado CRM'] === 'En Conversación';
+      return activeState && differenceInHours(new Date(), modified) > 24;
+    } catch { return false; }
+  }).length;
+
+  // Forecast del mes: extrapolación por run rate del período actual
+  const { start: monthStart, end: monthEnd } = getDateRange('month');
+  const daysElapsed = Math.max(1, differenceInDays(new Date(), monthStart));
+  const daysInMonth = differenceInDays(monthEnd, monthStart) + 1;
+  const currentRevenue = filterByDateRange(leads, 'CreatedAt', monthStart, monthEnd)
+    .reduce((sum, l) => sum + (parseFloat(l['Monto Venta Cerrada (PEN)']) || 0), 0);
+  const forecast = daysElapsed > 0 ? Math.round((currentRevenue / daysElapsed) * daysInMonth) : 0;
+
   return {
     totalLeads,
     newLeads,
@@ -141,6 +159,8 @@ export function calculateMetrics(leads, dateFilter = 'month', customStart = null
     conversionRate,
     revenue,
     requiresAttention,
+    leadsWithoutResponse24h,
+    forecast,
     changes
   };
 }
@@ -603,4 +623,46 @@ export function generateInsights(leads, metrics) {
   }
 
   return insights.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+}
+
+/**
+ * Calcular CAC (Costo de Adquisición de Cliente)
+ * Requiere ad_spend del contexto del negocio y el count de leads del período
+ */
+export function calculateCAC(monthlyAdSpend, leadsCount) {
+  if (!monthlyAdSpend || !leadsCount || leadsCount === 0) return null;
+  return parseFloat(monthlyAdSpend) / leadsCount;
+}
+
+/**
+ * Calcular margen estimado basado en ticket promedio y costos operativos.
+ * Si el cliente no configuró costos, se usa el margen del sector como referencia.
+ */
+export function calculateMargin(revenue, costsEstimate) {
+  if (!revenue || revenue === 0) return null;
+  const profit = revenue - (costsEstimate || revenue * 0.4); // 40% costos por defecto
+  return profit / revenue;
+}
+
+/**
+ * Calcular distribución de leads por fuente de tráfico
+ */
+export function calculateSourceDistribution(leads) {
+  return calculateDistribution(leads, 'Origen del Lead');
+}
+
+/**
+ * Calcular leads atendidos por IA vs manualmente.
+ * Requiere que el campo 'Tipo Atención' exista en NocoDB.
+ * Si no existe, devuelve null para que el componente muestre "No configurado".
+ */
+export function calculateAIvsManual(leads) {
+  const fieldExists = leads.some(l => l['Tipo Atención'] !== undefined);
+  if (!fieldExists) return null;
+
+  const ai = leads.filter(l => l['Tipo Atención'] === 'IA').length;
+  const manual = leads.filter(l => l['Tipo Atención'] === 'Manual').length;
+  const total = ai + manual;
+
+  return { ai, manual, total, aiPct: total > 0 ? ai / total : 0 };
 }
