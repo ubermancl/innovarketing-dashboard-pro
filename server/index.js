@@ -340,7 +340,15 @@ app.post('/api/ai/test', authenticateToken, aiLimiter, async (req, res) => {
       headers: { 'Authorization': `Bearer ${openrouterKey}` },
     });
     if (!response.ok) return res.status(response.status).json({ error: `OpenRouter respondió ${response.status}` });
-    res.json({ success: true });
+    const data = await response.json();
+    const models = (data.data || []).map(m => ({
+      id: m.id,
+      name: m.name || m.id,
+      inputPricePerM: parseFloat(m.pricing?.prompt || 0) * 1_000_000,
+      outputPricePerM: parseFloat(m.pricing?.completion || 0) * 1_000_000,
+      free: parseFloat(m.pricing?.prompt || 0) === 0,
+    }));
+    res.json({ success: true, models });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

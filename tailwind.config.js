@@ -8,48 +8,41 @@ export default {
     extend: {
       colors: {
         dark: {
-          900: '#0A0A0A', // fondo body — true black
-          800: '#111111', // tarjetas
-          700: '#1A1A1A', // bordes de tarjetas, inputs
-          600: '#252525', // divisores
-          500: '#383838', // texto muted bg
-          400: '#555555', // texto muted
+          900: '#0E0D16', // fondo principal — azul muy oscuro
+          800: '#1A1928', // cards
+          700: '#222136', // bordes, inputs
+          600: '#2E2C45', // hover, divisores
+          500: '#3D3B57', // estados muted
+          400: '#6B6980', // texto muted
+          sidebar: '#110F1E', // sidebar ligeramente más oscura
         },
         accent: {
-          orange: '#F97316', // naranja principal
-          cyan: '#00D9FF',
+          orange: '#F97316',
+          green:  '#22C55E',
+          red:    '#EF4444',
+          yellow: '#F59E0B',
+          // mantenidos para compatibilidad — usar con moderación
+          cyan:    '#00D9FF',
           magenta: '#B24BF3',
-          purple: '#8B5CF6',
-          pink: '#EC4899',
-          yellow: '#FFD93D',
-          green: '#10B981',
-          red: '#EF4444',
+          purple:  '#8B5CF6',
         },
-        success: '#10B981',
+        success: '#22C55E',
         warning: '#F59E0B',
-        error: '#EF4444',
-        info: '#F97316',
+        error:   '#EF4444',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
-        'card': '12px',
-        'button': '8px',
-        'input': '6px',
+        'card':   '10px',
+        'button': '7px',
+        'input':  '6px',
       },
       boxShadow: {
-        'card': '0 0 0 1px rgba(255,255,255,0.04)',
-        'card-hover': '0 0 24px rgba(249, 115, 22, 0.12)',
-        'glow-orange': '0 0 24px rgba(249, 115, 22, 0.3)',
-        'glow-cyan': '0 0 20px rgba(0, 217, 255, 0.25)',
-        'glow-green': '0 0 20px rgba(16, 185, 129, 0.25)',
-        'glow-magenta': '0 0 20px rgba(178, 75, 243, 0.25)',
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
-        'gradient-card': 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+        'card':         '0 1px 3px rgba(0,0,0,0.4)',
+        'card-hover':   '0 4px 16px rgba(0,0,0,0.3)',
+        'sidebar-glow': '0 0 20px rgba(249,115,22,0.15)',
       },
     },
   },

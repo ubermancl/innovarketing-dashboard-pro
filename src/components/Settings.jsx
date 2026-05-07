@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Save, X, Bot, Building2, Wrench, AlertCircle, CheckCircle2, Eye, EyeOff, ChevronDown, Database, Copy } from 'lucide-react';
+import { Save, X, Bot, Building2, Wrench, AlertCircle, CheckCircle2, Trash2, ChevronDown, Database, Copy } from 'lucide-react';
 import { useBusinessContext } from '../hooks/useBusinessContext';
 import { useInstallerConfig } from '../hooks/useInstallerConfig';
-import { Button, Input, Select, Card } from './ui';
-import { AI_MODELS } from '../utils/constants';
+import { Button, Input, Select } from './ui';
 
 const TABS = [
   { id: 'negocio', label: 'Contexto del Negocio', icon: Building2 },
@@ -23,25 +22,25 @@ const VERTICALS = [
 
 const CURRENCIES = [
   { value: 'USD', locale: 'es-419', label: 'USD — Dólar' },
-  { value: 'CLP', locale: 'es-CL', label: 'CLP — Peso chileno' },
-  { value: 'PEN', locale: 'es-PE', label: 'PEN — Sol peruano' },
-  { value: 'MXN', locale: 'es-MX', label: 'MXN — Peso mexicano' },
-  { value: 'COP', locale: 'es-CO', label: 'COP — Peso colombiano' },
-  { value: 'ARS', locale: 'es-AR', label: 'ARS — Peso argentino' },
-  { value: 'EUR', locale: 'es-ES', label: 'EUR — Euro' },
+  { value: 'CLP', locale: 'es-CL',  label: 'CLP — Peso chileno' },
+  { value: 'PEN', locale: 'es-PE',  label: 'PEN — Sol peruano' },
+  { value: 'MXN', locale: 'es-MX',  label: 'MXN — Peso mexicano' },
+  { value: 'COP', locale: 'es-CO',  label: 'COP — Peso colombiano' },
+  { value: 'ARS', locale: 'es-AR',  label: 'ARS — Peso argentino' },
+  { value: 'EUR', locale: 'es-ES',  label: 'EUR — Euro' },
 ];
 
 const RECS_SCHEMA = [
-  { col: 'Titulo', type: 'Single line text', desc: 'Título de la recomendación' },
-  { col: 'Dato', type: 'Single line text', desc: 'Dato que sustenta el insight' },
-  { col: 'Accion', type: 'Long text', desc: 'Acción concreta a tomar' },
-  { col: 'Tipo', type: 'Single line text', desc: 'cuello_botella | insight | nota_estrategica' },
-  { col: 'Sesion_ID', type: 'Single line text', desc: 'Agrupa registros de un análisis' },
-  { col: 'Modelo_IA', type: 'Single line text', desc: 'Modelo de IA utilizado' },
-  { col: 'Estado', type: 'Single line text', desc: 'Pendiente | Aceptada | En Progreso | Implementada | Rechazada' },
-  { col: 'Nota_Cliente', type: 'Long text', desc: 'Comentarios del cliente' },
-  { col: 'Tokens_Sesion', type: 'Number', desc: 'Tokens usados en el análisis' },
-  { col: 'Costo_Sesion', type: 'Decimal', desc: 'Costo USD del análisis' },
+  { col: 'Titulo',       type: 'Single line text', desc: 'Título de la recomendación' },
+  { col: 'Dato',         type: 'Single line text', desc: 'Dato que sustenta el insight' },
+  { col: 'Accion',       type: 'Long text',         desc: 'Acción concreta a tomar' },
+  { col: 'Tipo',         type: 'Single line text', desc: 'cuello_botella | insight | nota_estrategica' },
+  { col: 'Sesion_ID',    type: 'Single line text', desc: 'Agrupa registros de un análisis' },
+  { col: 'Modelo_IA',    type: 'Single line text', desc: 'Modelo de IA utilizado' },
+  { col: 'Estado',       type: 'Single line text', desc: 'Pendiente | Aceptada | En Progreso | Implementada | Rechazada' },
+  { col: 'Nota_Cliente', type: 'Long text',         desc: 'Comentarios del cliente' },
+  { col: 'Tokens_Sesion',type: 'Number',            desc: 'Tokens usados en el análisis' },
+  { col: 'Costo_Sesion', type: 'Decimal',           desc: 'Costo USD del análisis' },
 ];
 
 const AD_PLATFORMS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'YouTube'];
@@ -75,7 +74,6 @@ function CheckboxGroup({ label, options, selected, onChange }) {
       : [...selected, value];
     onChange(next);
   };
-
   return (
     <div>
       <label className="block text-sm text-gray-400 mb-2">{label}</label>
@@ -233,8 +231,27 @@ function NegocioTab({ local, setLocal }) {
   );
 }
 
-function IATab({ local, setLocal, testResult, onTest, isTesting }) {
-  const [showKey, setShowKey] = useState(false);
+function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpired }) {
+  const [editingKey, setEditingKey] = useState(!local.openrouterKey);
+  const [modelSearch, setModelSearch] = useState('');
+
+  // Auto-refresh model list every 60 s once loaded
+  useEffect(() => {
+    if (!models.length || !local.openrouterKey) return;
+    const timer = setInterval(onTest, 60_000);
+    return () => clearInterval(timer);
+  }, [models.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const maskedKey = local.openrouterKey
+    ? `••••••••••••••••••••${local.openrouterKey.slice(-6)}`
+    : '';
+
+  const filteredModels = models.filter(m => {
+    const q = modelSearch.toLowerCase();
+    if (!q) return true;
+    if (q === 'free') return m.free;
+    return m.id.toLowerCase().includes(q) || (m.name || '').toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6">
@@ -242,60 +259,51 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
         La API key se guarda solo en tu navegador (localStorage). Nunca sale de tu dispositivo excepto para hacer análisis — se envía al servidor solo por la duración de cada llamada.
       </div>
 
-      <div className="relative">
-        <Input
-          label="API Key de OpenRouter"
-          type={showKey ? 'text' : 'password'}
-          value={local.openrouterKey}
-          onChange={e => setLocal(p => ({ ...p, openrouterKey: e.target.value }))}
-          placeholder="sk-or-..."
-        />
-        <button
-          type="button"
-          onClick={() => setShowKey(!showKey)}
-          className="absolute right-3 top-9 text-dark-400 hover:text-gray-300 transition-colors"
-        >
-          {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
+      {keyExpired && (
+        <div className="flex items-center gap-3 p-3 rounded-card bg-error/10 border border-error/30 text-error text-sm">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          La API key expiró o es inválida. Límpiala e ingresa una nueva.
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm text-gray-400 mb-1.5">API Key de OpenRouter</label>
+        {editingKey ? (
+          <div className="flex gap-2">
+            <input
+              className="flex-1 bg-dark-700 border border-dark-600 rounded-button px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent-orange placeholder:text-dark-500"
+              type="password"
+              value={local.openrouterKey}
+              onChange={e => setLocal(p => ({ ...p, openrouterKey: e.target.value }))}
+              placeholder="sk-or-..."
+              autoFocus
+            />
+            {local.openrouterKey && (
+              <button
+                type="button"
+                onClick={() => setEditingKey(false)}
+                className="px-3 py-2 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors whitespace-nowrap"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-dark-700 border border-dark-600 rounded-button px-3 py-2">
+            <span className="flex-1 font-mono text-sm text-dark-400 tracking-wider">{maskedKey}</span>
+            <button
+              type="button"
+              onClick={() => { setLocal(p => ({ ...p, openrouterKey: '' })); setEditingKey(true); }}
+              className="p-1 text-dark-500 hover:text-error transition-colors"
+              title="Limpiar y cambiar API key"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
-      <Select
-        label="Modelo de IA"
-        value={local.aiModel}
-        onChange={e => setLocal(p => ({ ...p, aiModel: e.target.value }))}
-        options={AI_MODELS.map(m => ({ value: m.id, label: m.name }))}
-      />
-
-      <div className="rounded-card border border-dark-700 overflow-hidden">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-dark-700/50 text-dark-400">
-              <th className="text-left p-3">Modelo</th>
-              <th className="text-right p-3">Input /M tokens</th>
-              <th className="text-right p-3">Output /M tokens</th>
-              <th className="text-right p-3">~Costo/análisis</th>
-            </tr>
-          </thead>
-          <tbody>
-            {AI_MODELS.map((m) => {
-              const estCost = (1200 * m.inputPricePerM / 1_000_000) + (500 * m.outputPricePerM / 1_000_000);
-              return (
-                <tr key={m.id} className={`border-t border-dark-700 ${local.aiModel === m.id ? 'bg-accent-orange/5' : ''}`}>
-                  <td className="p-3 text-gray-300 flex items-center gap-2">
-                    {local.aiModel === m.id && <span className="w-1.5 h-1.5 rounded-full bg-accent-orange" />}
-                    {m.name}
-                  </td>
-                  <td className="p-3 text-right text-dark-400">${m.inputPricePerM || '0'}</td>
-                  <td className="p-3 text-right text-dark-400">${m.outputPricePerM || '0'}</td>
-                  <td className="p-3 text-right text-accent-green font-mono">{estCost === 0 ? 'Gratis' : `$${estCost.toFixed(4)}`}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button
           variant="secondary"
           onClick={onTest}
@@ -306,7 +314,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
         </Button>
         {testResult === 'ok' && (
           <span className="flex items-center gap-1.5 text-sm text-accent-green">
-            <CheckCircle2 className="w-4 h-4" /> Conexión exitosa
+            <CheckCircle2 className="w-4 h-4" /> Conexión exitosa · {models.length} modelos disponibles
           </span>
         )}
         {testResult && testResult !== 'ok' && (
@@ -315,6 +323,74 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
           </span>
         )}
       </div>
+
+      {models.length > 0 && (
+        <div className="space-y-3">
+          <input
+            className="w-full bg-dark-700 border border-dark-600 rounded-button px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent-orange placeholder:text-dark-500"
+            placeholder='Buscar modelo... (escribe "free" para gratuitos)'
+            value={modelSearch}
+            onChange={e => setModelSearch(e.target.value)}
+          />
+          <div className="rounded-card border border-dark-700 overflow-hidden">
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-dark-800">
+                  <tr className="text-dark-400">
+                    <th className="text-left p-2.5">Modelo</th>
+                    <th className="text-right p-2.5 hidden sm:table-cell">In /M tok</th>
+                    <th className="text-right p-2.5 hidden sm:table-cell">Out /M tok</th>
+                    <th className="text-right p-2.5">~Costo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredModels.map(m => {
+                    const estCost = (1200 * m.inputPricePerM / 1_000_000) + (500 * m.outputPricePerM / 1_000_000);
+                    const isSelected = local.aiModel === m.id;
+                    return (
+                      <tr
+                        key={m.id}
+                        onClick={() => setLocal(p => ({ ...p, aiModel: m.id }))}
+                        className={`border-t border-dark-700/50 cursor-pointer transition-colors ${
+                          isSelected ? 'bg-accent-orange/10' : 'hover:bg-dark-700/40'
+                        }`}
+                      >
+                        <td className="p-2.5 text-gray-300">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-accent-orange shrink-0" />}
+                            <span className="truncate">{m.name || m.id}</span>
+                            {m.free && (
+                              <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-accent-green/15 text-accent-green">GRATIS</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2.5 text-right text-dark-400 hidden sm:table-cell">${m.inputPricePerM.toFixed(2)}</td>
+                        <td className="p-2.5 text-right text-dark-400 hidden sm:table-cell">${m.outputPricePerM.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono text-accent-green">
+                          {estCost === 0 ? 'Gratis' : `$${estCost.toFixed(4)}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredModels.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-4 text-center text-dark-500">Sin resultados para "{modelSearch}"</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p className="text-xs text-dark-500">
+            Click en una fila para seleccionar el modelo. Lista actualizada automáticamente cada 60 s.
+            {local.aiModel && (
+              <span className="ml-2 text-dark-400">
+                Seleccionado: <span className="text-gray-300 font-mono">{local.aiModel}</span>
+              </span>
+            )}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -367,8 +443,6 @@ function SchemaHelper() {
 }
 
 function InstaladorTab({ local, setLocal, isLoading }) {
-  const [showMapping, setShowMapping] = useState(false);
-
   if (isLoading) {
     return <div className="py-8 text-center text-dark-400 text-sm">Cargando configuración del servidor...</div>;
   }
@@ -379,15 +453,12 @@ function InstaladorTab({ local, setLocal, isLoading }) {
     field_mapping: { ...p.field_mapping, [field]: value },
   }));
 
-  const currencyOpt = CURRENCIES.find(c => c.value === local.currency);
-
   return (
     <div className="space-y-5">
       <div className="p-4 bg-accent-orange/8 border border-accent-orange/20 rounded-card text-xs text-dark-400 leading-relaxed">
         Esta configuración se guarda en el servidor. Cámbiala desde el dashboard sin necesitar acceso SSH.
       </div>
 
-      {/* Datos del cliente */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="Nombre del cliente (interno)"
@@ -406,7 +477,6 @@ function InstaladorTab({ local, setLocal, isLoading }) {
         />
       </div>
 
-      {/* URLs NocoDB */}
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
           <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
@@ -424,21 +494,15 @@ function InstaladorTab({ local, setLocal, isLoading }) {
             onChange={e => setField('nocodb_recs_url', e.target.value)}
             placeholder="https://crm.ejemplo.com/api/v1/db/data/noco/.../md_..."
           />
-          {local.nocodb_recs_url && (
-            <p className="text-xs text-accent-green mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Historial IA activo
-            </p>
-          )}
-          {!local.nocodb_recs_url && (
-            <p className="text-xs text-dark-500 mt-1">Sin URL → el historial IA no estará disponible</p>
-          )}
+          {local.nocodb_recs_url
+            ? <p className="text-xs text-accent-green mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Historial IA activo</p>
+            : <p className="text-xs text-dark-500 mt-1">Sin URL → el historial IA no estará disponible</p>
+          }
         </div>
       </div>
 
-      {/* Schema helper */}
       <SchemaHelper />
 
-      {/* Mapeo de campos */}
       <Collapsible title="Mapeo de campos NocoDB (avanzado)">
         <p className="text-xs text-dark-400 mb-4 leading-relaxed">
           Si los nombres de columnas en tu tabla NocoDB son distintos a los valores por defecto, cámbialos aquí.
@@ -471,8 +535,9 @@ export default function Settings({ onClose }) {
   const [saved, setSaved] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [models, setModels] = useState([]);
+  const [keyExpired, setKeyExpired] = useState(false);
 
-  // Sync localInstaller once the server config loads
   useEffect(() => {
     if (!isLoadingInstaller && !configSynced) {
       setLocalInstaller({ ...installerConfig });
@@ -498,21 +563,29 @@ export default function Settings({ onClose }) {
     if (!local.openrouterKey) return;
     setIsTesting(true);
     setTestResult(null);
+    setKeyExpired(false);
     try {
       const res = await fetch('/api/ai/test', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-openrouter-key': local.openrouterKey },
       });
-      setTestResult(res.ok ? 'ok' : `Error ${res.status}`);
+      if (res.status === 401) {
+        setKeyExpired(true);
+        setTestResult('API key inválida o expirada');
+      } else if (res.ok) {
+        const data = await res.json();
+        setModels(data.models || []);
+        setTestResult('ok');
+      } else {
+        setTestResult(`Error ${res.status}`);
+      }
     } catch (e) {
       setTestResult(e.message);
     } finally {
       setIsTesting(false);
     }
   };
-
-  const isSaving = isSavingInstaller;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -546,7 +619,15 @@ export default function Settings({ onClose }) {
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'negocio' && <NegocioTab local={local} setLocal={setLocal} />}
           {activeTab === 'ia' && (
-            <IATab local={local} setLocal={setLocal} testResult={testResult} onTest={testConnection} isTesting={isTesting} />
+            <IATab
+              local={local}
+              setLocal={setLocal}
+              testResult={testResult}
+              onTest={testConnection}
+              isTesting={isTesting}
+              models={models}
+              keyExpired={keyExpired}
+            />
           )}
           {activeTab === 'instalador' && (
             <InstaladorTab local={localInstaller} setLocal={setLocalInstaller} isLoading={isLoadingInstaller && !configSynced} />
@@ -555,7 +636,7 @@ export default function Settings({ onClose }) {
 
         <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} loading={isSaving} disabled={isSaving}>
+          <Button onClick={handleSave} loading={isSavingInstaller} disabled={isSavingInstaller}>
             {saved
               ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> Guardado</>
               : <><Save className="w-4 h-4" /> Guardar ajustes</>

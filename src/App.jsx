@@ -6,6 +6,7 @@ import { useBusinessContext, BusinessContextProvider } from './hooks/useBusiness
 import { useInstallerConfig } from './hooks/useInstallerConfig';
 import { useRecommendations } from './hooks/useRecommendations';
 import Layout from './components/Layout';
+import Sidebar from './components/Sidebar';
 import Login from './components/Login';
 import Header from './components/Header';
 import Cards from './components/Cards';
@@ -25,6 +26,7 @@ function Dashboard() {
   const { businessContext } = useBusinessContext();
   const { recsConfigured } = useInstallerConfig();
   const [showSettings, setShowSettings] = useState(false);
+  const [activeView, setActiveView] = useState('dashboard');
 
   const {
     filteredLeads, allLeads, isLoading, isRefreshing, error, lastUpdated, isOnline,
@@ -55,17 +57,23 @@ function Dashboard() {
 
   return (
     <Layout>
+      <Sidebar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        isOnline={isOnline}
+        lastUpdated={lastUpdated}
+        isRefreshing={isRefreshing}
+        onRefresh={refresh}
+        onOpenSettings={() => setShowSettings(true)}
+        onLogout={logout}
+      />
+
       <Header
         dateFilter={dateFilter}
         onDateFilterChange={setDateFilter}
         customDateRange={customDateRange}
         onCustomDateChange={setCustomDateRange}
-        onRefresh={refresh}
-        isRefreshing={isRefreshing}
-        lastUpdated={lastUpdated}
-        isOnline={isOnline}
-        onLogout={logout}
-        onOpenSettings={() => setShowSettings(true)}
+        activeView={activeView}
       />
 
       <main className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -82,86 +90,101 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Métricas principales + operacionales */}
-        {isRefreshing ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-              {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
-            </div>
-          </div>
-        ) : (
-          <Cards
-            metrics={stats.metrics}
-            advancedMetrics={stats.advancedMetrics}
-            aiVsManual={stats.aiVsManual}
-            businessContext={businessContext}
-          />
+        {/* ── Vista: Resumen ── */}
+        {activeView === 'dashboard' && (
+          <>
+            {isRefreshing ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                  {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+              </div>
+            ) : (
+              <Cards
+                metrics={stats.metrics}
+                advancedMetrics={stats.advancedMetrics}
+                aiVsManual={stats.aiVsManual}
+                businessContext={businessContext}
+              />
+            )}
+            <Alerts alerts={stats.alerts} />
+            <AdvancedMetrics metrics={stats.advancedMetrics} />
+            {isRefreshing ? <SkeletonChart /> : (
+              <Charts
+                funnelData={stats.funnelData}
+                pipelineData={stats.pipelineData}
+                leadsByDay={stats.leadsByDay}
+                appointmentsByDay={stats.appointmentsByDay}
+                revenueByWeek={stats.revenueByWeek}
+                statusDistribution={stats.statusDistribution}
+                districtDistribution={stats.districtDistribution}
+                originDistribution={stats.originDistribution}
+              />
+            )}
+            <Insights insights={stats.insights} />
+          </>
         )}
 
-        {/* Alertas del CRM */}
-        <Alerts alerts={stats.alerts} />
-
-        {/* Métricas avanzadas */}
-        <AdvancedMetrics metrics={stats.advancedMetrics} />
-
-        {/* Gráficos */}
-        {isRefreshing ? (
-          <SkeletonChart />
-        ) : (
-          <Charts
-            funnelData={stats.funnelData}
-            pipelineData={stats.pipelineData}
-            leadsByDay={stats.leadsByDay}
-            appointmentsByDay={stats.appointmentsByDay}
-            revenueByWeek={stats.revenueByWeek}
-            statusDistribution={stats.statusDistribution}
-            districtDistribution={stats.districtDistribution}
-            originDistribution={stats.originDistribution}
-          />
+        {/* ── Vista: Análisis ── */}
+        {activeView === 'analytics' && (
+          <>
+            <AdvancedMetrics metrics={stats.advancedMetrics} />
+            {isRefreshing ? <SkeletonChart /> : (
+              <Charts
+                funnelData={stats.funnelData}
+                pipelineData={stats.pipelineData}
+                leadsByDay={stats.leadsByDay}
+                appointmentsByDay={stats.appointmentsByDay}
+                revenueByWeek={stats.revenueByWeek}
+                statusDistribution={stats.statusDistribution}
+                districtDistribution={stats.districtDistribution}
+                originDistribution={stats.originDistribution}
+              />
+            )}
+            <Insights insights={stats.insights} />
+          </>
         )}
 
-        {/* Señales del CRM (reglas automáticas) */}
-        <Insights insights={stats.insights} />
+        {/* ── Vista: IA & Historial ── */}
+        {activeView === 'ai' && (
+          <>
+            <AIDiagnosis
+              metrics={stats.metrics}
+              advancedMetrics={stats.advancedMetrics}
+              funnelData={stats.funnelData}
+              alerts={stats.alerts}
+              historyForPrompt={historyForPrompt}
+              recsConfigured={recsConfigured}
+              onSaveSession={saveSession}
+            />
+            <RecommendationsHistory
+              sessions={sessions}
+              isLoading={recsLoading}
+              notConfigured={recsNotConfigured}
+              error={recsError}
+              onUpdate={updateStatus}
+            />
+          </>
+        )}
 
-        {/* Diagnóstico IA via OpenRouter */}
-        <AIDiagnosis
-          metrics={stats.metrics}
-          advancedMetrics={stats.advancedMetrics}
-          funnelData={stats.funnelData}
-          alerts={stats.alerts}
-          historyForPrompt={historyForPrompt}
-          recsConfigured={recsConfigured}
-          onSaveSession={saveSession}
-        />
-
-        {/* Historial de recomendaciones IA */}
-        <RecommendationsHistory
-          sessions={sessions}
-          isLoading={recsLoading}
-          notConfigured={recsNotConfigured}
-          error={recsError}
-          onUpdate={updateStatus}
-        />
-
-        {/* Tabla de leads */}
-        {isRefreshing ? (
-          <SkeletonTable rows={5} />
-        ) : (
-          <Table
-            leads={filteredLeads}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            districtFilter={districtFilter}
-            onDistrictChange={setDistrictFilter}
-            uniqueStatuses={uniqueStatuses}
-            uniqueDistricts={uniqueDistricts}
-          />
+        {/* ── Vista: Tabla de Leads ── */}
+        {activeView === 'tabla' && (
+          isRefreshing ? <SkeletonTable rows={5} /> : (
+            <Table
+              leads={filteredLeads}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusChange={setStatusFilter}
+              districtFilter={districtFilter}
+              onDistrictChange={setDistrictFilter}
+              uniqueStatuses={uniqueStatuses}
+              uniqueDistricts={uniqueDistricts}
+            />
+          )
         )}
       </main>
 
-      {/* Panel de ajustes */}
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </Layout>
   );
