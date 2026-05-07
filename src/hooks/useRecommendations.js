@@ -97,6 +97,16 @@ export function useRecommendations(recsConfigured) {
     }
   }, [notConfigured, load]);
 
+  // Elimina un registro individual por ID
+  const deleteRecord = useCallback(async (id) => {
+    try {
+      await deleteRecommendation(id, businessContext.nocodbToken);
+      setRecommendations(prev => prev.filter(r => r.Id !== id));
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [businessContext.nocodbToken]);
+
   // Elimina todos los registros de una sesión por su Sesion_ID
   const deleteSession = useCallback(async (sessionId) => {
     const toDelete = recommendations.filter(r => r.Sesion_ID === sessionId);
@@ -149,6 +159,7 @@ export function useRecommendations(recsConfigured) {
     error,
     saveSession,
     updateStatus,
+    deleteRecord,
     deleteSession,
     reload: load,
   };

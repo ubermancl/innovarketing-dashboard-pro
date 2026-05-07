@@ -49,6 +49,7 @@ function Dashboard() {
     error: recsError,
     saveSession,
     updateStatus,
+    deleteRecord,
     deleteSession,
   } = useRecommendations(recsConfigured);
 
@@ -166,6 +167,7 @@ function Dashboard() {
               error={recsError}
               onUpdate={updateStatus}
               onDelete={deleteSession}
+              onDeleteRecord={deleteRecord}
             />
           </>
         )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Save, X, Bot, Building2, Wrench, AlertCircle, CheckCircle2, Trash2, ChevronDown, Database, Copy } from 'lucide-react';
 import { useBusinessContext } from '../hooks/useBusinessContext';
 import { useInstallerConfig } from '../hooks/useInstallerConfig';
