@@ -114,6 +114,76 @@ function Collapsible({ title, children, defaultOpen = false }) {
   );
 }
 
+function LogoUpload({ logoUrl, onChange }) {
+  const fileRef = useState(null);
+  const inputRef = { current: null };
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const SIZE = 96;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE; canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      // Crop cuadrado centrado
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2;
+      const sy = (img.height - min) / 2;
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, SIZE, SIZE);
+      URL.revokeObjectURL(url);
+      onChange(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.src = url;
+    e.target.value = '';
+  };
+
+  return (
+    <div>
+      <label className="block text-sm text-gray-400 mb-1.5">Logo del sidebar</label>
+      <div className="flex items-center gap-3">
+        {/* Preview */}
+        <div className="w-10 h-10 rounded-lg bg-accent-orange flex items-center justify-center shrink-0 overflow-hidden border border-dark-600">
+          {logoUrl
+            ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+            : <span className="text-white text-sm font-bold">?</span>
+          }
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => document.getElementById('logo-file-input').click()}
+            className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors"
+          >
+            {logoUrl ? 'Cambiar imagen' : 'Subir imagen'}
+          </button>
+          {logoUrl && (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-error/70 hover:text-error hover:border-error/30 transition-colors"
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+
+        <input
+          id="logo-file-input"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFile}
+        />
+      </div>
+      <p className="text-xs text-dark-500 mt-1.5">PNG o JPG. Se recorta automáticamente a cuadrado.</p>
+    </div>
+  );
+}
+
 function NegocioTab({ local, setLocal }) {
   return (
     <div className="space-y-5">
@@ -134,13 +204,11 @@ function NegocioTab({ local, setLocal }) {
           label="Iniciales del logo (2 letras)"
           value={local.logoInitials || ''}
           onChange={e => setLocal(p => ({ ...p, logoInitials: e.target.value.slice(0, 2).toUpperCase() }))}
-          placeholder="Ej: NC (auto-generado si vacío)"
+          placeholder="Ej: NC (auto si vacío)"
         />
-        <Input
-          label="URL de logo (opcional)"
-          value={local.logoUrl || ''}
-          onChange={e => setLocal(p => ({ ...p, logoUrl: e.target.value }))}
-          placeholder="https://... (PNG/JPG cuadrado, 64×64)"
+        <LogoUpload
+          logoUrl={local.logoUrl || ''}
+          onChange={url => setLocal(p => ({ ...p, logoUrl: url }))}
         />
         <Input
           label="País"
