@@ -35,14 +35,22 @@ export default function Sidebar({
   const { businessContext } = useBusinessContext();
   const [mobileOpen, setMobileOpen] = useState(false);
   const displayName = businessContext?.businessName || 'Dashboard Pro';
+  const logoUrl = businessContext?.logoUrl || '';
+  const initials = businessContext?.logoInitials ||
+    (businessContext?.businessName
+      ? businessContext.businessName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+      : 'IK');
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Brand */}
       <div className="px-4 py-5 border-b border-dark-700/50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent-orange flex items-center justify-center shrink-0">
-            <span className="text-white text-sm font-bold">IK</span>
+          <div className="w-8 h-8 rounded-lg bg-accent-orange flex items-center justify-center shrink-0 overflow-hidden">
+            {logoUrl
+              ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
+              : <span className="text-white text-sm font-bold">{initials}</span>
+            }
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-100 truncate">{displayName}</p>

@@ -131,6 +131,18 @@ function NegocioTab({ local, setLocal }) {
           options={[{ value: '', label: 'Selecciona...' }, ...VERTICALS]}
         />
         <Input
+          label="Iniciales del logo (2 letras)"
+          value={local.logoInitials || ''}
+          onChange={e => setLocal(p => ({ ...p, logoInitials: e.target.value.slice(0, 2).toUpperCase() }))}
+          placeholder="Ej: NC (auto-generado si vacío)"
+        />
+        <Input
+          label="URL de logo (opcional)"
+          value={local.logoUrl || ''}
+          onChange={e => setLocal(p => ({ ...p, logoUrl: e.target.value }))}
+          placeholder="https://... (PNG/JPG cuadrado, 64×64)"
+        />
+        <Input
           label="País"
           value={local.country}
           onChange={e => setLocal(p => ({ ...p, country: e.target.value }))}
@@ -441,27 +453,80 @@ function NocoTokenField({ token, setToken }) {
 }
 
 function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
+  const [bases, setBases] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [connectError, setConnectError] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
 
-  const testConnection = async () => {
-    if (!token || !local.nocodb_base_url || !local.nocodb_leads_table_id) return;
-    setIsTesting(true);
-    setTestResult(null);
+  const connected = bases.length > 0;
+
+  const connect = async () => {
+    if (!token || !local.nocodb_base_url) return;
+    setIsConnecting(true);
+    setConnectError(null);
+    setBases([]);
+    setTables([]);
     try {
-      const res = await fetch('/api/nocodb/test', {
+      const res = await fetch('/api/nocodb/connect', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-nocodb-token': token },
+        body: JSON.stringify({ base_url: local.nocodb_base_url }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setConnectError(data.error || `Error ${res.status}`); return; }
+      setBases(data.bases || []);
+      // Si solo hay una base, la seleccionamos automáticamente
+      if (data.bases?.length === 1) {
+        const baseId = data.bases[0].id;
+        setLocal(p => ({ ...p, nocodb_base_id: baseId }));
+        fetchTables(baseId, local.nocodb_base_url, token);
+      }
+    } catch (e) {
+      setConnectError(e.message);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const fetchTables = async (baseId, baseUrl, tok) => {
+    if (!baseId) return;
+    setIsLoadingTables(true);
+    setTables([]);
+    try {
+      const params = new URLSearchParams({ base_url: baseUrl || local.nocodb_base_url });
+      const res = await fetch(`/api/nocodb/bases/${baseId}/tables?${params}`, {
+        credentials: 'include',
+        headers: { 'x-nocodb-token': tok || token },
+      });
+      const data = await res.json();
+      if (res.ok) setTables(data.tables || []);
+    } catch (e) { console.error(e); }
+    finally { setIsLoadingTables(false); }
+  };
+
+  const handleBaseChange = (baseId) => {
+    setLocal(p => ({ ...p, nocodb_base_id: baseId, nocodb_leads_table_id: '', nocodb_recs_table_id: '' }));
+    fetchTables(baseId);
+  };
+
+  const testManual = async () => {
+    if (!token || !local.nocodb_base_url || !local.nocodb_leads_table_id) return;
+    setIsTesting(true); setTestResult(null);
+    try {
+      const res = await fetch('/api/nocodb/test', {
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-nocodb-token': token },
         body: JSON.stringify({ base_url: local.nocodb_base_url, table_id: local.nocodb_leads_table_id }),
       });
       const data = await res.json();
       setTestResult(res.ok ? 'ok' : (data.error || `Error ${res.status}`));
-    } catch (e) {
-      setTestResult(e.message);
-    } finally {
-      setIsTesting(false);
-    }
+    } catch (e) { setTestResult(e.message); }
+    finally { setIsTesting(false); }
   };
 
   if (isLoading) {
@@ -470,8 +535,7 @@ function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
 
   const setField = (key, value) => setLocal(p => ({ ...p, [key]: value }));
   const setMapping = (field, value) => setLocal(p => ({
-    ...p,
-    field_mapping: { ...p.field_mapping, [field]: value },
+    ...p, field_mapping: { ...p.field_mapping, [field]: value },
   }));
 
   return (
@@ -481,80 +545,127 @@ function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Nombre del cliente (interno)"
-          value={local.client_name || ''}
-          onChange={e => setField('client_name', e.target.value)}
-          placeholder="Ej: Clínica NutraSalud"
-        />
+        <Input label="Nombre del cliente (interno)" value={local.client_name || ''} onChange={e => setField('client_name', e.target.value)} placeholder="Ej: Clínica NutraSalud" />
         <Select
           label="Moneda"
           value={local.currency || 'USD'}
-          onChange={e => {
-            const c = CURRENCIES.find(x => x.value === e.target.value);
-            setLocal(p => ({ ...p, currency: e.target.value, currency_locale: c?.locale || 'es-419' }));
-          }}
+          onChange={e => { const c = CURRENCIES.find(x => x.value === e.target.value); setLocal(p => ({ ...p, currency: e.target.value, currency_locale: c?.locale || 'es-419' })); }}
           options={CURRENCIES.map(c => ({ value: c.value, label: c.label }))}
         />
       </div>
 
+      {/* Credencial NocoDB */}
       <div className="space-y-4 border border-dark-700 rounded-card p-4">
         <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-          <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
+          <Database className="w-4 h-4 text-dark-400" /> Credencial NocoDB
         </h4>
 
-        <NocoTokenField token={token} setToken={setToken} />
+        <NocoTokenField token={token} setToken={v => { setToken(v); setBases([]); setTables([]); setConnectError(null); }} />
 
-        <Input
-          label="URL base de NocoDB"
-          value={local.nocodb_base_url || ''}
-          onChange={e => { setField('nocodb_base_url', e.target.value); setTestResult(null); }}
-          placeholder="https://crm.ejemplo.com"
-        />
-
-        <div className="space-y-1">
-          <Input
-            label="ID de tabla — Leads"
-            value={local.nocodb_leads_table_id || ''}
-            onChange={e => { setField('nocodb_leads_table_id', e.target.value); setTestResult(null); }}
-            placeholder="mpbgjqphs0yncva"
-          />
-          <p className="text-xs text-dark-500">
-            Encuéntralo en NocoDB → abre la tabla → en la URL busca{' '}
-            <span className="font-mono text-dark-400">/api/v2/tables/<span className="text-accent-orange">ESTE_ID</span>/records</span>
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <Input
-            label="ID de tabla — Recomendaciones IA (opcional)"
-            value={local.nocodb_recs_table_id || ''}
-            onChange={e => setField('nocodb_recs_table_id', e.target.value)}
-            placeholder="md_xxxxxxxxxxxx"
-          />
-          <p className="text-xs text-dark-500">Deja vacío para deshabilitar el historial de análisis IA.</p>
-        </div>
-
-        <div className="flex items-center gap-3 pt-1">
-          <Button
-            variant="secondary"
-            onClick={testConnection}
-            loading={isTesting}
-            disabled={!token || !local.nocodb_base_url || !local.nocodb_leads_table_id || isTesting}
-          >
-            Probar conexión
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <Input
+              label="Host"
+              value={local.nocodb_base_url || ''}
+              onChange={e => { setField('nocodb_base_url', e.target.value); setBases([]); setTables([]); setConnectError(null); }}
+              placeholder="https://crm.ejemplo.com"
+            />
+          </div>
+          <Button variant="secondary" onClick={connect} loading={isConnecting} disabled={!token || !local.nocodb_base_url || isConnecting}>
+            Conectar
           </Button>
-          {testResult === 'ok' && (
-            <span className="flex items-center gap-1.5 text-sm text-accent-green">
-              <CheckCircle2 className="w-4 h-4" /> Conexión exitosa
-            </span>
-          )}
-          {testResult && testResult !== 'ok' && (
-            <span className="flex items-center gap-1.5 text-sm text-error">
-              <AlertCircle className="w-4 h-4" /> {testResult}
-            </span>
-          )}
         </div>
+
+        {/* Error con instrucción clara si es 403 */}
+        {connectError && (
+          <div className="p-3 rounded-card bg-error/10 border border-error/20 text-xs text-error space-y-1">
+            <p className="flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5 shrink-0" />{connectError}</p>
+            {connectError.includes('permisos') && (
+              <p className="text-dark-400 ml-5">En NocoDB: <span className="text-gray-300">Cuenta → Ajustes → API Tokens → crear token nuevo</span> (no desde dentro de una base)</p>
+            )}
+            <button type="button" onClick={() => setManualMode(true)} className="ml-5 text-accent-orange hover:underline">
+              Ingresar IDs manualmente →
+            </button>
+          </div>
+        )}
+
+        {/* Base selector */}
+        {connected && (
+          <Select
+            label="Base de datos"
+            value={local.nocodb_base_id || ''}
+            onChange={e => handleBaseChange(e.target.value)}
+            options={[{ value: '', label: 'Selecciona una base...' }, ...bases.map(b => ({ value: b.id, label: b.title }))]}
+          />
+        )}
+
+        {/* Table selectors */}
+        {isLoadingTables && <p className="text-xs text-dark-400">Cargando tablas...</p>}
+        {tables.length > 0 && !isLoadingTables && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Select
+              label="Tabla de Leads"
+              value={local.nocodb_leads_table_id || ''}
+              onChange={e => setField('nocodb_leads_table_id', e.target.value)}
+              options={[{ value: '', label: 'Selecciona...' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
+            />
+            <Select
+              label="Tabla Recomendaciones IA (opcional)"
+              value={local.nocodb_recs_table_id || ''}
+              onChange={e => setField('nocodb_recs_table_id', e.target.value)}
+              options={[{ value: '', label: 'Ninguna' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
+            />
+          </div>
+        )}
+
+        {/* Status */}
+        {local.nocodb_leads_table_id && (
+          <p className="text-xs text-accent-green flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            Leads configurados{local.nocodb_recs_table_id ? ' · Recomendaciones configuradas' : ''}
+          </p>
+        )}
+
+        {/* Modo manual — fallback cuando el token es de base */}
+        {!connected && (
+          <button
+            type="button"
+            onClick={() => setManualMode(!manualMode)}
+            className="text-xs text-dark-400 hover:text-gray-300 transition-colors"
+          >
+            {manualMode ? '↑ Ocultar IDs manuales' : '¿Token de base? Ingresa IDs manualmente →'}
+          </button>
+        )}
+
+        {manualMode && !connected && (
+          <div className="space-y-3 pt-1 border-t border-dark-700/50">
+            <div className="space-y-1">
+              <Input
+                label="ID de tabla — Leads"
+                value={local.nocodb_leads_table_id || ''}
+                onChange={e => { setField('nocodb_leads_table_id', e.target.value); setTestResult(null); }}
+                placeholder="mpbgjqphs0yncva"
+              />
+              <p className="text-xs text-dark-500">
+                En NocoDB → abre la tabla → URL:{' '}
+                <span className="font-mono">/api/v2/tables/<span className="text-accent-orange">ESTE_ID</span>/records</span>
+              </p>
+            </div>
+            <Input
+              label="ID de tabla — Recomendaciones IA (opcional)"
+              value={local.nocodb_recs_table_id || ''}
+              onChange={e => setField('nocodb_recs_table_id', e.target.value)}
+              placeholder="md_xxxxxxxxxxxx"
+            />
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={testManual} loading={isTesting} disabled={!token || !local.nocodb_base_url || !local.nocodb_leads_table_id || isTesting}>
+                Probar conexión
+              </Button>
+              {testResult === 'ok' && <span className="flex items-center gap-1.5 text-sm text-accent-green"><CheckCircle2 className="w-4 h-4" /> OK</span>}
+              {testResult && testResult !== 'ok' && <span className="text-sm text-error">{testResult}</span>}
+            </div>
+          </div>
+        )}
       </div>
 
       <SchemaHelper />

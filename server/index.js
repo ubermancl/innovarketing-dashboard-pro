@@ -224,9 +224,76 @@ app.put('/api/installer/config', authenticateToken, (req, res) => {
 });
 
 // ==========================================
-// NOCODB TEST — valida token + table_id sin requerir permisos de admin
+// NOCODB DISCOVERY — lista bases y tablas (requiere token de usuario, no de base)
 // ==========================================
 
+// Intenta múltiples endpoints de NocoDB para cubrir distintas versiones
+async function nocodbListBases(baseUrl, token) {
+  const host = baseUrl.replace(/\/$/, '');
+  const candidates = [
+    `${host}/api/v1/db/meta/projects/`,
+    `${host}/api/v1/db/meta/bases/`,
+  ];
+  for (const url of candidates) {
+    const res = await fetch(url, { headers: { 'xc-token': token } });
+    if (res.ok) {
+      const data = await res.json();
+      return (data.list || []).map(b => ({ id: b.id, title: b.title }));
+    }
+    if (res.status === 403) {
+      throw { status: 403, message: 'Token sin permisos de listado. Usa un token de usuario (Cuenta → API Tokens), no un token de base.' };
+    }
+  }
+  throw { status: 0, message: 'No se pudo conectar a NocoDB. Verifica la URL.' };
+}
+
+async function nocodbListTables(baseUrl, baseId, token) {
+  const host = baseUrl.replace(/\/$/, '');
+  const candidates = [
+    `${host}/api/v1/db/meta/projects/${baseId}/tables`,
+    `${host}/api/v1/db/meta/bases/${baseId}/tables`,
+  ];
+  for (const url of candidates) {
+    const res = await fetch(url, { headers: { 'xc-token': token } });
+    if (res.ok) {
+      const data = await res.json();
+      return (data.list || []).map(t => ({ id: t.id, title: t.title }));
+    }
+  }
+  throw new Error('No se pudieron cargar las tablas.');
+}
+
+app.post('/api/nocodb/connect', authenticateToken, async (req, res) => {
+  const token = getNocodbToken(req);
+  const { base_url } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token NocoDB requerido' });
+  if (!base_url) return res.status(400).json({ error: 'URL del host requerida' });
+
+  try {
+    const bases = await nocodbListBases(base_url, token);
+    res.json({ success: true, bases });
+  } catch (err) {
+    const status = err.status || 500;
+    res.status(status === 403 ? 403 : 500).json({ error: err.message || String(err) });
+  }
+});
+
+app.get('/api/nocodb/bases/:baseId/tables', authenticateToken, async (req, res) => {
+  const token = getNocodbToken(req);
+  const { base_url } = req.query;
+  const { baseId } = req.params;
+  if (!token) return res.status(400).json({ error: 'Token NocoDB requerido' });
+  if (!base_url) return res.status(400).json({ error: 'base_url requerida' });
+
+  try {
+    const tables = await nocodbListTables(base_url, baseId, token);
+    res.json({ success: true, tables });
+  } catch (err) {
+    res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
+// TEST — verifica token + table_id directamente (funciona con tokens de base)
 app.post('/api/nocodb/test', authenticateToken, async (req, res) => {
   const token = getNocodbToken(req);
   const { base_url, table_id } = req.body;
@@ -238,7 +305,7 @@ app.post('/api/nocodb/test', authenticateToken, async (req, res) => {
     const response = await fetch(url, { headers: { 'xc-token': token } });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      return res.status(response.status).json({ error: `NocoDB respondió ${response.status}${text ? ': ' + text.slice(0, 120) : ''}` });
+      return res.status(response.status).json({ error: `NocoDB ${response.status}${text ? ': ' + text.slice(0, 120) : ''}` });
     }
     const data = await response.json();
     res.json({ success: true, sample_count: data.list?.length ?? 0 });

@@ -5,6 +5,8 @@ const CONTEXT_KEY = 'ik_business_context';
 
 const DEFAULT_CONTEXT = {
   businessName: '',
+  logoUrl: '',      // URL de imagen o vacío para usar las iniciales
+  logoInitials: '', // Ej: "IK", "NC" — si está vacío se auto-genera desde businessName
   country: '',
   city: '',
   vertical: '',           // clínica | inmobiliaria | academia | retail | agencia | ecommerce | otro
