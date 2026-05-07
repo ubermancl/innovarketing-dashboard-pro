@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchRecommendations, createRecommendations, updateRecommendation, generateSessionId } from '../api/recommendations';
+import { fetchRecommendations, createRecommendations, updateRecommendation, deleteRecommendation, generateSessionId } from '../api/recommendations';
 import { useBusinessContext } from './useBusinessContext';
 
 export function useRecommendations(recsConfigured) {
@@ -97,6 +97,17 @@ export function useRecommendations(recsConfigured) {
     }
   }, [notConfigured, load]);
 
+  // Elimina todos los registros de una sesión por su Sesion_ID
+  const deleteSession = useCallback(async (sessionId) => {
+    const toDelete = recommendations.filter(r => r.Sesion_ID === sessionId);
+    try {
+      await Promise.all(toDelete.map(r => deleteRecommendation(r.Id, businessContext.nocodbToken)));
+      setRecommendations(prev => prev.filter(r => r.Sesion_ID !== sessionId));
+    } catch (e) {
+      setError(e.message);
+    }
+  }, [recommendations, businessContext.nocodbToken]);
+
   // Actualiza el estado de una recomendación y refleja el cambio localmente
   const updateStatus = useCallback(async (id, estado, nota = undefined) => {
     const update = { Estado: estado };
@@ -138,6 +149,7 @@ export function useRecommendations(recsConfigured) {
     error,
     saveSession,
     updateStatus,
+    deleteSession,
     reload: load,
   };
 }

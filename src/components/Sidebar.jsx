@@ -36,6 +36,7 @@ export default function Sidebar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const displayName = businessContext?.businessName || 'Dashboard Pro';
   const logoUrl = businessContext?.logoUrl || '';
+  const logoColor = businessContext?.logoColor || '#F97316';
   const initials = businessContext?.logoInitials ||
     (businessContext?.businessName
       ? businessContext.businessName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -46,7 +47,10 @@ export default function Sidebar({
       {/* Brand */}
       <div className="px-4 py-5 border-b border-dark-700/50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-accent-orange flex items-center justify-center shrink-0 overflow-hidden">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
+            style={{ backgroundColor: logoUrl ? undefined : logoColor }}
+          >
             {logoUrl
               ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
               : <span className="text-white text-sm font-bold">{initials}</span>

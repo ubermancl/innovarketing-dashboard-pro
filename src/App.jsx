@@ -49,6 +49,7 @@ function Dashboard() {
     error: recsError,
     saveSession,
     updateStatus,
+    deleteSession,
   } = useRecommendations(recsConfigured);
 
   if (isLoading && allLeads.length === 0) {
@@ -156,6 +157,7 @@ function Dashboard() {
               historyForPrompt={historyForPrompt}
               recsConfigured={recsConfigured}
               onSaveSession={saveSession}
+              dateFilter={dateFilter}
             />
             <RecommendationsHistory
               sessions={sessions}
@@ -163,6 +165,7 @@ function Dashboard() {
               notConfigured={recsNotConfigured}
               error={recsError}
               onUpdate={updateStatus}
+              onDelete={deleteSession}
             />
           </>
         )}

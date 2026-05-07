@@ -10,6 +10,8 @@ const DATE_FILTERS = [
   { value: 'last7',  label: 'Últimos 7 días' },
   { value: 'month',  label: 'Este mes' },
   { value: 'last30', label: 'Últimos 30 días' },
+  { value: 'last90', label: 'Últimos 90 días' },
+  { value: 'all',    label: 'Registro Histórico Máximo' },
   { value: 'custom', label: 'Personalizado' },
 ];
 
@@ -83,6 +85,8 @@ export default function Header({
         return `${fmt(s)} — ${fmt(e)}`;
       }
       case 'last30': return `${fmt(subDays(now, 29))} — ${fmt(now)}`;
+      case 'last90': return `${fmt(subDays(now, 89))} — ${fmt(now)}`;
+      case 'all': return 'Todo el registro histórico';
       case 'custom':
         if (customDateRange.start && customDateRange.end) {
           return `${fmt(new Date(customDateRange.start))} — ${fmt(new Date(customDateRange.end))}`;

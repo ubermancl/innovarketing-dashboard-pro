@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Brain, AlertCircle, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Brain, AlertCircle, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle2, Info } from 'lucide-react';
 import { Card, Button } from './ui';
 import { useBusinessContext } from '../hooks/useBusinessContext';
 import { callOpenRouter, buildDiagnosisPrompt } from '../api/openrouter';
@@ -57,9 +57,46 @@ function InsightCard({ insight, index }) {
   );
 }
 
+const DATE_FILTER_LABELS = {
+  today:  'Hoy',
+  week:   'Esta semana',
+  last7:  'Últimos 7 días',
+  month:  'Este mes',
+  last30: 'Últimos 30 días',
+  last90: 'Últimos 90 días',
+  all:    'Registro histórico completo',
+  custom: 'Período personalizado',
+};
+
+function DiagnosisInfo() {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-flex">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={() => setShow(v => !v)}
+        className="text-dark-500 hover:text-dark-300 transition-colors"
+        aria-label="¿Qué analiza?"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {show && (
+        <div className="absolute left-5 top-0 z-30 w-72 p-3 bg-dark-800 border border-dark-600 rounded-card shadow-xl text-xs text-gray-300 leading-relaxed">
+          <p className="font-semibold text-gray-100 mb-1.5">¿Qué analiza el Diagnóstico IA?</p>
+          <p className="mb-1.5">Toma las métricas del período seleccionado en el filtro de fecha (leads, conversión, embudo, alertas) y aplica la <span className="text-accent-orange font-medium">Teoría de Restricciones (TOC)</span> para identificar el cuello de botella principal que limita tus resultados.</p>
+          <p className="mb-1.5">Genera <span className="text-accent-cyan font-medium">3 acciones priorizadas</span> con evidencia concreta y una nota estratégica de contexto.</p>
+          <p className="text-dark-400">Si NocoDB está configurado, incluye el historial de análisis anteriores para evitar repetir recomendaciones ya implementadas.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AIDiagnosis({
   metrics, advancedMetrics, funnelData, alerts,
   historyForPrompt, recsConfigured, onSaveSession,
+  dateFilter,
 }) {
   const { businessContext } = useBusinessContext();
   const [result, setResult] = useState(null);
@@ -152,14 +189,18 @@ export default function AIDiagnosis({
             <Brain className="w-5 h-5 text-accent-orange" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-gray-100">Diagnóstico IA</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-base font-semibold text-gray-100">Diagnóstico IA</h3>
+              <DiagnosisInfo />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-xs text-dark-400">{modelName}</p>
+              <span className="text-xs text-dark-500">·</span>
+              <span className="text-xs text-dark-400">
+                {DATE_FILTER_LABELS[dateFilter] || 'período seleccionado'}
+              </span>
               {recsConfigured && (
                 <span className="text-xs text-accent-green">· historial activo</span>
-              )}
-              {!recsConfigured && (
-                <span className="text-xs text-dark-500">· sin historial (configura tabla NocoDB)</span>
               )}
             </div>
           </div>

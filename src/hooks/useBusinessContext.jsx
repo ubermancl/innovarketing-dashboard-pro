@@ -5,8 +5,9 @@ const CONTEXT_KEY = 'ik_business_context';
 
 const DEFAULT_CONTEXT = {
   businessName: '',
-  logoUrl: '',      // URL de imagen o vacío para usar las iniciales
-  logoInitials: '', // Ej: "IK", "NC" — si está vacío se auto-genera desde businessName
+  logoUrl: '',        // URL de imagen o vacío para usar las iniciales
+  logoInitials: '',   // Ej: "IK", "NC" — si está vacío se auto-genera desde businessName
+  logoColor: '#F97316', // Color de fondo del avatar cuando no hay imagen
   country: '',
   city: '',
   vertical: '',           // clínica | inmobiliaria | academia | retail | agencia | ecommerce | otro

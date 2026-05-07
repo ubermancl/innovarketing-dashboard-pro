@@ -30,6 +30,20 @@ export async function createRecommendations(records, nocodbToken = '') {
   return res.json();
 }
 
+export async function deleteRecommendation(id, nocodbToken = '') {
+  const headers = nocodbToken ? { 'x-nocodb-token': nocodbToken } : {};
+  const res = await fetch(`/api/recommendations/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function updateRecommendation(id, { Estado, Nota_Cliente }, nocodbToken = '') {
   const headers = { 'Content-Type': 'application/json' };
   if (nocodbToken) headers['x-nocodb-token'] = nocodbToken;

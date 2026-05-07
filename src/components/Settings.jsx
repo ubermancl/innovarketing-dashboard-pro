@@ -114,7 +114,50 @@ function Collapsible({ title, children, defaultOpen = false }) {
   );
 }
 
-function LogoUpload({ logoUrl, onChange }) {
+const AVATAR_COLORS = [
+  '#F97316', // naranja Innovarketing
+  '#3B82F6', // azul
+  '#10B981', // verde
+  '#8B5CF6', // violeta
+  '#EC4899', // rosa
+  '#EF4444', // rojo
+  '#F59E0B', // ámbar
+  '#06B6D4', // cyan
+  '#6366F1', // índigo
+  '#84CC16', // lima
+];
+
+function AvatarColorPicker({ color, onChange, logoUrl }) {
+  if (logoUrl) return null; // ocultar si hay imagen
+  return (
+    <div>
+      <label className="block text-sm text-gray-400 mb-1.5">Color del avatar (cuando no hay imagen)</label>
+      <div className="flex items-center gap-2 flex-wrap">
+        {AVATAR_COLORS.map(c => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            title={c}
+            className={`w-7 h-7 rounded-lg transition-transform hover:scale-110 border-2 ${
+              color === c ? 'border-white scale-110' : 'border-transparent'
+            }`}
+            style={{ backgroundColor: c }}
+          />
+        ))}
+        <input
+          type="color"
+          value={color || '#F97316'}
+          onChange={e => onChange(e.target.value)}
+          title="Color personalizado"
+          className="w-7 h-7 rounded-lg cursor-pointer border border-dark-600 bg-dark-700 p-0.5"
+        />
+      </div>
+    </div>
+  );
+}
+
+function LogoUpload({ logoUrl, logoColor, onChange }) {
   const inputRef = useRef(null);
   const [status, setStatus] = useState(null); // null | 'loading' | 'ok' | 'error'
   const [info, setInfo] = useState('');
@@ -169,7 +212,7 @@ function LogoUpload({ logoUrl, onChange }) {
     <div>
       <label className="block text-sm text-gray-400 mb-1.5">Logo del sidebar</label>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-accent-orange flex items-center justify-center shrink-0 overflow-hidden border border-dark-600">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-dark-600" style={{ backgroundColor: logoUrl ? undefined : (logoColor || '#F97316') }}>
           {logoUrl
             ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
             : <span className="text-white text-sm font-bold">?</span>
@@ -241,7 +284,13 @@ function NegocioTab({ local, setLocal }) {
         />
         <LogoUpload
           logoUrl={local.logoUrl || ''}
+          logoColor={local.logoColor || '#F97316'}
           onChange={url => setLocal(p => ({ ...p, logoUrl: url }))}
+        />
+        <AvatarColorPicker
+          color={local.logoColor || '#F97316'}
+          onChange={color => setLocal(p => ({ ...p, logoColor: color }))}
+          logoUrl={local.logoUrl || ''}
         />
         <Input
           label="País"

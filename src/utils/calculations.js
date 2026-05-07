@@ -40,6 +40,10 @@ export function getDateRange(filter, customStart = null, customEnd = null) {
       return { start: startOfDay(subDays(now, 6)), end: endOfDay(now) };
     case 'last30':
       return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
+    case 'last90':
+      return { start: startOfDay(subDays(now, 89)), end: endOfDay(now) };
+    case 'all':
+      return { start: null, end: null };
     case 'custom':
       return {
         start: customStart ? startOfDay(customStart) : startOfMonth(now),
@@ -70,6 +74,10 @@ export function getPreviousPeriod(filter, customStart = null, customEnd = null) 
       return { start: startOfDay(subDays(now, 13)), end: endOfDay(subDays(now, 7)) };
     case 'last30':
       return { start: startOfDay(subDays(now, 59)), end: endOfDay(subDays(now, 30)) };
+    case 'last90':
+      return { start: startOfDay(subDays(now, 179)), end: endOfDay(subDays(now, 90)) };
+    case 'all':
+      return { start: null, end: null };
     case 'custom':
       if (customStart && customEnd) {
         const days = differenceInDays(customEnd, customStart);

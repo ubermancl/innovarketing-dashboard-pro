@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { History, ChevronDown, CheckCircle2, Clock, XCircle, Zap, AlertTriangle, Loader2, StickyNote } from 'lucide-react';
+import { History, ChevronDown, CheckCircle2, Clock, XCircle, Zap, AlertTriangle, Loader2, StickyNote, Trash2 } from 'lucide-react';
 import { Card } from './ui';
-import { formatDate } from '../utils/formatters';
+import { formatDateTime } from '../utils/formatters';
 
 const ESTADOS = [
   { value: 'Pendiente',    label: 'Pendiente',    color: 'text-warning bg-warning/10 border-warning/30' },
@@ -124,16 +124,34 @@ function RecordRow({ rec, onUpdate, updatingId }) {
   );
 }
 
-function SessionGroup({ session, onUpdate, updatingId }) {
+const DONE_STATES = new Set(['Implementada', 'Rechazada']);
+const TYPE_ORDER = { cuello_botella: 0, insight: 1, nota_estrategica: 2 };
+
+function SessionGroup({ session, onUpdate, updatingId, onDelete }) {
   const [open, setOpen] = useState(false);
-  const bottleneck = session.records.find(r => r.Tipo === 'cuello_botella');
-  const insights = session.records.filter(r => r.Tipo === 'insight');
-  const nota = session.records.find(r => r.Tipo === 'nota_estrategica');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const model = session.records[0]?.Modelo_IA || '';
   const date = session.records[0]?.CreatedAt;
 
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setIsDeleting(true);
+    await onDelete(session.sessionId);
+    setIsDeleting(false);
+  };
+
   const pendientes = session.records.filter(r => r.Estado === 'Pendiente').length;
   const implementadas = session.records.filter(r => r.Estado === 'Implementada').length;
+
+  // Activos primero (orden por tipo), completados/rechazados al final
+  const sortedRecords = [...session.records].sort((a, b) => {
+    const aDone = DONE_STATES.has(a.Estado);
+    const bDone = DONE_STATES.has(b.Estado);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return (TYPE_ORDER[a.Tipo] ?? 1) - (TYPE_ORDER[b.Tipo] ?? 1);
+  });
 
   return (
     <div className="border border-dark-700 rounded-card overflow-hidden">
@@ -144,7 +162,7 @@ function SessionGroup({ session, onUpdate, updatingId }) {
         <div className="flex items-center gap-3">
           <div>
             <p className="text-sm font-medium text-gray-200">
-              {date ? formatDate(date) : 'Sesión sin fecha'}
+              {date ? formatDateTime(date) : 'Sesión sin fecha'}
             </p>
             <p className="text-xs text-dark-400">
               {model.split('/').pop()} · {session.records.length} registro{session.records.length !== 1 ? 's' : ''}
@@ -153,21 +171,37 @@ function SessionGroup({ session, onUpdate, updatingId }) {
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-dark-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            title={confirmDelete ? 'Haz clic de nuevo para confirmar' : 'Eliminar sesión'}
+            className={`p-1.5 rounded transition-colors ${
+              confirmDelete
+                ? 'bg-error/20 text-error hover:bg-error/30'
+                : 'text-dark-600 hover:text-error hover:bg-error/10'
+            }`}
+          >
+            {isDeleting
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <Trash2 className="w-3.5 h-3.5" />}
+          </button>
+          <ChevronDown className={`w-4 h-4 text-dark-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
       </button>
 
       {open && (
         <div className="border-t border-dark-700">
-          {bottleneck && <RecordRow rec={bottleneck} onUpdate={onUpdate} updatingId={updatingId} />}
-          {insights.map(r => <RecordRow key={r.Id} rec={r} onUpdate={onUpdate} updatingId={updatingId} />)}
-          {nota && <RecordRow rec={nota} onUpdate={onUpdate} updatingId={updatingId} />}
+          {sortedRecords.map(r => (
+            <RecordRow key={r.Id} rec={r} onUpdate={onUpdate} updatingId={updatingId} />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-export default function RecommendationsHistory({ sessions, isLoading, notConfigured, error, onUpdate }) {
+export default function RecommendationsHistory({ sessions, isLoading, notConfigured, error, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
@@ -217,7 +251,7 @@ export default function RecommendationsHistory({ sessions, isLoading, notConfigu
           {!isLoading && sessions.length > 0 && (
             <div className="space-y-3">
               {sessions.map(s => (
-                <SessionGroup key={s.sessionId} session={s} onUpdate={handleUpdate} updatingId={updatingId} />
+                <SessionGroup key={s.sessionId} session={s} onUpdate={handleUpdate} updatingId={updatingId} onDelete={onDelete} />
               ))}
             </div>
           )}

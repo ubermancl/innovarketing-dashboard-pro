@@ -405,6 +405,25 @@ app.patch('/api/recommendations/:id', authenticateToken, async (req, res) => {
   }
 });
 
+app.delete('/api/recommendations/:id', authenticateToken, async (req, res) => {
+  const cfg = readConfig();
+  const recsUrl = buildRecsUrl(cfg);
+  if (!recsUrl) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada.' });
+
+  const token = getNocodbToken(req);
+  if (!token) return res.status(400).json({ error: 'Token NocoDB no encontrado.' });
+
+  const rowId = parseInt(req.params.id, 10);
+  if (isNaN(rowId)) return res.status(400).json({ error: 'ID inválido' });
+
+  try {
+    const data = await nocodbRequest(recsUrl, 'DELETE', [{ Id: rowId }], token);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ error: 'Error eliminando recomendación', details: error.message });
+  }
+});
+
 // ==========================================
 // PROXY IA — OpenRouter
 // ==========================================
