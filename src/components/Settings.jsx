@@ -441,58 +441,27 @@ function NocoTokenField({ token, setToken }) {
 }
 
 function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
-  const [bases, setBases] = useState([]);
-  const [tables, setTables] = useState([]);
-  const [connectResult, setConnectResult] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [isTesting, setIsTesting] = useState(false);
 
-  const connect = async () => {
-    if (!token || !local.nocodb_base_url) return;
-    setIsConnecting(true);
-    setConnectResult(null);
-    setBases([]);
-    setTables([]);
+  const testConnection = async () => {
+    if (!token || !local.nocodb_base_url || !local.nocodb_leads_table_id) return;
+    setIsTesting(true);
+    setTestResult(null);
     try {
-      const res = await fetch('/api/nocodb/connect', {
+      const res = await fetch('/api/nocodb/test', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'x-nocodb-token': token },
-        body: JSON.stringify({ base_url: local.nocodb_base_url }),
+        body: JSON.stringify({ base_url: local.nocodb_base_url, table_id: local.nocodb_leads_table_id }),
       });
       const data = await res.json();
-      if (!res.ok) { setConnectResult(data.error || `Error ${res.status}`); return; }
-      setBases(data.bases || []);
-      setConnectResult('ok');
+      setTestResult(res.ok ? 'ok' : (data.error || `Error ${res.status}`));
     } catch (e) {
-      setConnectResult(e.message);
+      setTestResult(e.message);
     } finally {
-      setIsConnecting(false);
+      setIsTesting(false);
     }
-  };
-
-  const loadTables = async (baseId) => {
-    if (!baseId || !token || !local.nocodb_base_url) return;
-    setIsLoadingTables(true);
-    setTables([]);
-    try {
-      const params = new URLSearchParams({ base_url: local.nocodb_base_url });
-      const res = await fetch(`/api/nocodb/bases/${baseId}/tables?${params}`, {
-        credentials: 'include',
-        headers: { 'x-nocodb-token': token },
-      });
-      const data = await res.json();
-      if (res.ok) setTables(data.tables || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoadingTables(false);
-    }
-  };
-
-  const handleBaseChange = (baseId) => {
-    setLocal(p => ({ ...p, nocodb_base_id: baseId, nocodb_leads_table_id: '', nocodb_recs_table_id: '' }));
-    loadTables(baseId);
   };
 
   if (isLoading) {
@@ -529,7 +498,6 @@ function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
         />
       </div>
 
-      {/* Conexión NocoDB */}
       <div className="space-y-4 border border-dark-700 rounded-card p-4">
         <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
           <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
@@ -537,77 +505,56 @@ function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
 
         <NocoTokenField token={token} setToken={setToken} />
 
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
-            <Input
-              label="URL base de NocoDB"
-              value={local.nocodb_base_url || ''}
-              onChange={e => { setField('nocodb_base_url', e.target.value); setConnectResult(null); setBases([]); setTables([]); }}
-              placeholder="https://crm.ejemplo.com"
-            />
-          </div>
-          <Button
-            variant="secondary"
-            onClick={connect}
-            loading={isConnecting}
-            disabled={!token || !local.nocodb_base_url || isConnecting}
-          >
-            Conectar
-          </Button>
+        <Input
+          label="URL base de NocoDB"
+          value={local.nocodb_base_url || ''}
+          onChange={e => { setField('nocodb_base_url', e.target.value); setTestResult(null); }}
+          placeholder="https://crm.ejemplo.com"
+        />
+
+        <div className="space-y-1">
+          <Input
+            label="ID de tabla — Leads"
+            value={local.nocodb_leads_table_id || ''}
+            onChange={e => { setField('nocodb_leads_table_id', e.target.value); setTestResult(null); }}
+            placeholder="mpbgjqphs0yncva"
+          />
+          <p className="text-xs text-dark-500">
+            Encuéntralo en NocoDB → abre la tabla → en la URL busca{' '}
+            <span className="font-mono text-dark-400">/api/v2/tables/<span className="text-accent-orange">ESTE_ID</span>/records</span>
+          </p>
         </div>
 
-        {connectResult === 'ok' && bases.length === 0 && (
-          <p className="text-sm text-warning flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4" /> Conectado pero sin bases disponibles.
-          </p>
-        )}
-        {connectResult && connectResult !== 'ok' && (
-          <p className="text-sm text-error flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4" /> {connectResult}
-          </p>
-        )}
-
-        {/* Base selector */}
-        {bases.length > 0 && (
-          <Select
-            label="Base de datos"
-            value={local.nocodb_base_id || ''}
-            onChange={e => handleBaseChange(e.target.value)}
-            options={[{ value: '', label: 'Selecciona una base...' }, ...bases.map(b => ({ value: b.id, label: b.title }))]}
+        <div className="space-y-1">
+          <Input
+            label="ID de tabla — Recomendaciones IA (opcional)"
+            value={local.nocodb_recs_table_id || ''}
+            onChange={e => setField('nocodb_recs_table_id', e.target.value)}
+            placeholder="md_xxxxxxxxxxxx"
           />
-        )}
+          <p className="text-xs text-dark-500">Deja vacío para deshabilitar el historial de análisis IA.</p>
+        </div>
 
-        {/* Table selectors */}
-        {(tables.length > 0 || isLoadingTables) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {isLoadingTables ? (
-              <p className="col-span-2 text-xs text-dark-400">Cargando tablas...</p>
-            ) : (
-              <>
-                <Select
-                  label="Tabla de Leads"
-                  value={local.nocodb_leads_table_id || ''}
-                  onChange={e => setField('nocodb_leads_table_id', e.target.value)}
-                  options={[{ value: '', label: 'Selecciona...' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
-                />
-                <Select
-                  label="Tabla de Recomendaciones IA"
-                  value={local.nocodb_recs_table_id || ''}
-                  onChange={e => setField('nocodb_recs_table_id', e.target.value)}
-                  options={[{ value: '', label: 'Selecciona (opcional)' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
-                />
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Status indicators */}
-        {local.nocodb_leads_table_id && (
-          <p className="text-xs text-accent-green flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Leads configurados
-            {local.nocodb_recs_table_id && ' · Recomendaciones configuradas'}
-          </p>
-        )}
+        <div className="flex items-center gap-3 pt-1">
+          <Button
+            variant="secondary"
+            onClick={testConnection}
+            loading={isTesting}
+            disabled={!token || !local.nocodb_base_url || !local.nocodb_leads_table_id || isTesting}
+          >
+            Probar conexión
+          </Button>
+          {testResult === 'ok' && (
+            <span className="flex items-center gap-1.5 text-sm text-accent-green">
+              <CheckCircle2 className="w-4 h-4" /> Conexión exitosa
+            </span>
+          )}
+          {testResult && testResult !== 'ok' && (
+            <span className="flex items-center gap-1.5 text-sm text-error">
+              <AlertCircle className="w-4 h-4" /> {testResult}
+            </span>
+          )}
+        </div>
       </div>
 
       <SchemaHelper />

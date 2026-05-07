@@ -224,45 +224,24 @@ app.put('/api/installer/config', authenticateToken, (req, res) => {
 });
 
 // ==========================================
-// NOCODB DISCOVERY — lista bases y tablas
+// NOCODB TEST — valida token + table_id sin requerir permisos de admin
 // ==========================================
 
-app.post('/api/nocodb/connect', authenticateToken, async (req, res) => {
+app.post('/api/nocodb/test', authenticateToken, async (req, res) => {
   const token = getNocodbToken(req);
-  const { base_url } = req.body;
-  if (!token) return res.status(400).json({ error: 'Token NocoDB requerido en el header x-nocodb-token' });
-  if (!base_url) return res.status(400).json({ error: 'base_url requerida' });
-
-  try {
-    const url = `${base_url.replace(/\/$/, '')}/api/v1/db/meta/projects/`;
-    const response = await fetch(url, { headers: { 'xc-token': token } });
-    if (!response.ok) {
-      return res.status(response.status).json({ error: `NocoDB respondió ${response.status} — verifica la URL y el token` });
-    }
-    const data = await response.json();
-    const bases = (data.list || []).map(b => ({ id: b.id, title: b.title }));
-    res.json({ success: true, bases });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/nocodb/bases/:baseId/tables', authenticateToken, async (req, res) => {
-  const token = getNocodbToken(req);
-  const { base_url } = req.query;
-  const { baseId } = req.params;
+  const { base_url, table_id } = req.body;
   if (!token) return res.status(400).json({ error: 'Token NocoDB requerido' });
-  if (!base_url) return res.status(400).json({ error: 'base_url requerida como query param' });
+  if (!base_url || !table_id) return res.status(400).json({ error: 'base_url y table_id requeridos' });
 
   try {
-    const url = `${base_url.replace(/\/$/, '')}/api/v1/db/meta/projects/${baseId}/tables`;
+    const url = `${base_url.replace(/\/$/, '')}/api/v2/tables/${table_id}/records?limit=1`;
     const response = await fetch(url, { headers: { 'xc-token': token } });
     if (!response.ok) {
-      return res.status(response.status).json({ error: `NocoDB respondió ${response.status}` });
+      const text = await response.text().catch(() => '');
+      return res.status(response.status).json({ error: `NocoDB respondió ${response.status}${text ? ': ' + text.slice(0, 120) : ''}` });
     }
     const data = await response.json();
-    const tables = (data.list || []).map(t => ({ id: t.id, title: t.title }));
-    res.json({ success: true, tables });
+    res.json({ success: true, sample_count: data.list?.length ?? 0 });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
