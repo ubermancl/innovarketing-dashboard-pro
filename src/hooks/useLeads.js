@@ -116,6 +116,11 @@ export function useLeads() {
     return fetchLeads(true);
   }, [fetchLeads]);
 
+  const clearCache = useCallback(() => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setLeads([]);
+  }, []);
+
   // Filtrar leads
   const filteredLeads = useMemo(() => {
     let result = [...leads];
@@ -185,6 +190,7 @@ export function useLeads() {
 
     // Acciones
     refresh,
+    clearCache,
 
     // Filtros
     dateFilter,

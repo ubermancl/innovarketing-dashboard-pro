@@ -19,7 +19,7 @@ export async function callOpenRouter({ model, systemPrompt, userPrompt, openrout
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || `Error ${response.status}`);
+    throw new Error(err.error || `Error ${response.status}: ${response.statusText}`);
   }
 
   return response.json();

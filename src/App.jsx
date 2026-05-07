@@ -30,7 +30,7 @@ function Dashboard() {
 
   const {
     filteredLeads, allLeads, isLoading, isRefreshing, error, lastUpdated, isOnline,
-    refresh, dateFilter, setDateFilter, customDateRange, setCustomDateRange,
+    refresh, clearCache, dateFilter, setDateFilter, customDateRange, setCustomDateRange,
     searchQuery, setSearchQuery, statusFilter, setStatusFilter,
     districtFilter, setDistrictFilter, uniqueStatuses, uniqueDistricts,
   } = useLeads();
@@ -190,7 +190,7 @@ function Dashboard() {
         )}
       </main>
 
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} onClearCache={clearCache} />}
     </Layout>
   );
 }

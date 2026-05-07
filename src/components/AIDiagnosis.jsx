@@ -8,16 +8,49 @@ import { AI_MODELS } from '../utils/constants';
 
 const insightIcons = { 0: '🎯', 1: '⚡', 2: '📈' };
 
-// Extrae JSON aunque el modelo lo envuelva en ```json ... ``` o añada texto extra
-function extractJSON(text) {
-  if (!text) throw new Error('Respuesta vacía del modelo');
-  try { return JSON.parse(text); } catch {}
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fence) { try { return JSON.parse(fence[1]); } catch {} }
-  const obj = text.match(/\{[\s\S]*\}/);
-  if (obj) { try { return JSON.parse(obj[0]); } catch {} }
-  throw new Error('El modelo no devolvió JSON válido. Prueba con otro modelo o reintenta.');
+// Repara JSON-ish con problemas comunes de modelos open-source
+function repairJSON(s) {
+  return s
+    .replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false').replace(/\bNone\b/g, 'null')
+    .replace(/,\s*([\]}])/g, '$1')   // trailing commas
+    .replace(/(['"])?([a-zA-Z_]\w*)(['"])?\s*:/g, '"$2":'); // unquoted keys
 }
+
+// Extrae JSON aunque el modelo añada texto extra, markdown o tenga errores menores
+function extractJSON(text) {
+  if (!text) throw new Error('Respuesta vacía del modelo. Prueba con Claude Haiku o GPT-4o Mini.');
+  const tryParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
+  // 1. JSON puro
+  let r = tryParse(text);
+  if (r) return r;
+  // 2. JSON puro reparado
+  r = tryParse(repairJSON(text));
+  if (r) return r;
+  // 3. De bloque ```json ... ```
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fence) {
+    r = tryParse(fence[1]) || tryParse(repairJSON(fence[1]));
+    if (r) return r;
+  }
+  // 4. Primer objeto JSON en el texto
+  const obj = text.match(/\{[\s\S]*\}/);
+  if (obj) {
+    r = tryParse(obj[0]) || tryParse(repairJSON(obj[0]));
+    if (r) return r;
+  }
+  throw new Error('El modelo no generó JSON válido. Modelos recomendados: Claude Haiku, GPT-4o Mini, Grok.');
+}
+
+// Modelos verificados como compatibles con el diagnóstico
+const VERIFIED_IDS = new Set([
+  'anthropic/claude-3-haiku', 'anthropic/claude-3.5-haiku', 'anthropic/claude-3.5-haiku-20241022',
+  'anthropic/claude-3-sonnet', 'anthropic/claude-3.5-sonnet', 'anthropic/claude-3.5-sonnet-20241022',
+  'anthropic/claude-3-opus', 'anthropic/claude-opus-4', 'anthropic/claude-sonnet-4',
+  'openai/gpt-4o-mini', 'openai/gpt-4o', 'openai/chatgpt-4o-latest',
+  'x-ai/grok-3', 'x-ai/grok-3-mini', 'x-ai/grok-4', 'x-ai/grok-4-0709',
+  'deepseek/deepseek-chat', 'deepseek/deepseek-r1',
+  'google/gemini-flash-1.5', 'google/gemini-flash-2.0',
+]);
 
 const DATE_FILTER_LABELS = {
   today:  'Hoy',
@@ -200,27 +233,35 @@ function ModelPicker({ modelId, onSelect, openrouterKey }) {
             {!loading && filtered.length === 0 && (
               <p className="text-center py-4 text-xs text-dark-500">Sin resultados</p>
             )}
-            {!loading && filtered.map(m => (
-              <button
-                key={m.id}
-                onClick={() => { onSelect(m.id); setOpen(false); setSearch(''); }}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-dark-700 transition-colors ${
-                  m.id === modelId ? 'bg-accent-orange/10' : ''
-                }`}
-              >
-                <div className="min-w-0 mr-2">
-                  <p className={`text-xs font-medium truncate ${m.id === modelId ? 'text-accent-orange' : 'text-gray-200'}`}>
-                    {m.name || m.id.split('/').pop()}
-                  </p>
-                  <p className="text-xs text-dark-500 truncate">{m.id}</p>
-                </div>
-                <div className="shrink-0">{formatPrice(m)}</div>
-              </button>
-            ))}
+            {!loading && filtered.map(m => {
+              const verified = VERIFIED_IDS.has(m.id);
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => { onSelect(m.id); setOpen(false); setSearch(''); }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-dark-700 transition-colors ${
+                    m.id === modelId ? 'bg-accent-orange/10' : ''
+                  }`}
+                >
+                  <div className="min-w-0 mr-2">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-xs font-medium truncate ${m.id === modelId ? 'text-accent-orange' : 'text-gray-200'}`}>
+                        {m.name || m.id.split('/').pop()}
+                      </p>
+                      {verified && <span className="text-accent-green text-xs shrink-0" title="Verificado compatible">✓</span>}
+                    </div>
+                    <p className="text-xs text-dark-500 truncate">{m.id}</p>
+                  </div>
+                  <div className="shrink-0">{formatPrice(m)}</div>
+                </button>
+              );
+            })}
           </div>
 
           <div className="px-3 py-2 border-t border-dark-700">
-            <p className="text-xs text-dark-500">{loaded ? `${allModels.length} modelos · cambio solo para este análisis` : 'Conecta tu key para ver todos los modelos'}</p>
+            <p className="text-xs text-dark-500">
+              {loaded ? `${allModels.length} modelos · ` : ''}<span className="text-accent-green">✓</span> = verificado compatible · cambio solo para este análisis
+            </p>
           </div>
         </div>
       )}

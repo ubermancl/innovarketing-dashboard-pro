@@ -126,7 +126,7 @@ const loginLimiter = rateLimit({
 });
 
 const aiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 20,
+  windowMs: 60 * 60 * 1000, max: 100,
   message: { error: 'Límite de análisis IA alcanzado. Espera una hora.' },
   standardHeaders: true, legacyHeaders: false,
 });
@@ -458,11 +458,16 @@ app.post('/api/ai/diagnose', authenticateToken, aiLimiter, async (req, res) => {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({ error: 'Error OpenRouter', details: err.error?.message || response.statusText });
+      const detail = err.error?.message || err.error?.code || response.statusText || `HTTP ${response.status}`;
+      return res.status(response.status).json({ error: `OpenRouter: ${detail}` });
     }
 
     const data = await response.json();
-    res.json({ success: true, content: data.choices?.[0]?.message?.content || '', usage: data.usage || {}, model: data.model || model });
+    const content = data.choices?.[0]?.message?.content || '';
+    if (!content) {
+      return res.status(422).json({ error: 'El modelo devolvió una respuesta vacía. Prueba con Claude Haiku, GPT-4o Mini o Grok.' });
+    }
+    res.json({ success: true, content, usage: data.usage || {}, model: data.model || model });
   } catch (error) {
     res.status(500).json({ error: 'Error llamando a OpenRouter', details: error.message });
   }

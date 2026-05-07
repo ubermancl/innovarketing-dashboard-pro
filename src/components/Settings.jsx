@@ -888,7 +888,7 @@ function SchemaHelper() {
   );
 }
 
-export default function Settings({ onClose }) {
+export default function Settings({ onClose, onClearCache }) {
   const { businessContext, saveBusinessContext } = useBusinessContext();
   const { config: installerConfig, isLoading: isLoadingInstaller, saveConfig, isSaving: isSavingInstaller } = useInstallerConfig();
 
@@ -1006,14 +1006,30 @@ export default function Settings({ onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} loading={isSavingInstaller} disabled={isSavingInstaller}>
-            {saved
-              ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> Guardado</>
-              : <><Save className="w-4 h-4" /> Guardar ajustes</>
-            }
-          </Button>
+        <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-between gap-3">
+          {/* Borrar caché de datos — útil al cambiar de cliente */}
+          {activeTab === 'instalador' && onClearCache && (
+            <button
+              type="button"
+              onClick={() => { onClearCache(); setSaved(false); }}
+              className="text-xs text-dark-500 hover:text-error transition-colors flex items-center gap-1.5"
+              title="Elimina los datos en caché del navegador (localStorage). Los datos reales en NocoDB no se tocan."
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Borrar caché de datos del navegador
+            </button>
+          )}
+          {activeTab !== 'instalador' && <span />}
+
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} loading={isSavingInstaller} disabled={isSavingInstaller}>
+              {saved
+                ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> Guardado</>
+                : <><Save className="w-4 h-4" /> Guardar ajustes</>
+              }
+            </Button>
+          </div>
         </div>
       </div>
     </div>
