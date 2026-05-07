@@ -3,6 +3,8 @@ import { useAuth, AuthProvider } from './hooks/useAuth';
 import { useLeads } from './hooks/useLeads';
 import { useStats } from './hooks/useStats';
 import { useBusinessContext, BusinessContextProvider } from './hooks/useBusinessContext';
+import { useInstallerConfig } from './hooks/useInstallerConfig';
+import { useRecommendations } from './hooks/useRecommendations';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Header from './components/Header';
@@ -14,12 +16,14 @@ import Table from './components/Table';
 import Insights from './components/Insights';
 import Settings from './components/Settings';
 import AIDiagnosis from './components/AIDiagnosis';
+import RecommendationsHistory from './components/RecommendationsHistory';
 import { LoadingScreen } from './components/ui';
 import { SkeletonCard, SkeletonChart, SkeletonTable } from './components/ui/Skeleton';
 
 function Dashboard() {
   const { logout } = useAuth();
   const { businessContext } = useBusinessContext();
+  const { recsConfigured } = useInstallerConfig();
   const [showSettings, setShowSettings] = useState(false);
 
   const {
@@ -34,6 +38,16 @@ function Dashboard() {
     customDateRange.start, customDateRange.end,
     businessContext,
   );
+
+  const {
+    sessions,
+    historyForPrompt,
+    isLoading: recsLoading,
+    notConfigured: recsNotConfigured,
+    error: recsError,
+    saveSession,
+    updateStatus,
+  } = useRecommendations(recsConfigured);
 
   if (isLoading && allLeads.length === 0) {
     return <LoadingScreen message="Cargando datos del dashboard..." />;
@@ -115,6 +129,18 @@ function Dashboard() {
           advancedMetrics={stats.advancedMetrics}
           funnelData={stats.funnelData}
           alerts={stats.alerts}
+          historyForPrompt={historyForPrompt}
+          recsConfigured={recsConfigured}
+          onSaveSession={saveSession}
+        />
+
+        {/* Historial de recomendaciones IA */}
+        <RecommendationsHistory
+          sessions={sessions}
+          isLoading={recsLoading}
+          notConfigured={recsNotConfigured}
+          error={recsError}
+          onUpdate={updateStatus}
         />
 
         {/* Tabla de leads */}

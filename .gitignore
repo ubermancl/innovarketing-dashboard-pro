@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.*.local
 
+# Configuración del instalador — contiene URLs de clientes, no committear
+server/installer.config.json
+
 # Editor directories
 .idea/
 .vscode/

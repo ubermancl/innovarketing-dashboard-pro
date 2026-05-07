@@ -25,8 +25,9 @@ export async function callOpenRouter({ model, systemPrompt, userPrompt, openrout
   return response.json();
 }
 
-// Construir el prompt de diagnóstico con métricas + contexto del negocio
-export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, alerts, advancedMetrics }) {
+// Construir el prompt de diagnóstico con métricas + contexto + historial previo.
+// El historial evita que la IA repita recomendaciones ya implementadas o rechazadas.
+export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, alerts, advancedMetrics, historyForPrompt }) {
   const ctx = businessContext || {};
   const m = metrics || {};
   const adv = advancedMetrics || {};
@@ -38,6 +39,10 @@ export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, ale
   const alertsText = (alerts || []).length > 0
     ? alerts.map(a => `  - ${a.message}`).join('\n')
     : '  Sin alertas activas';
+
+  const historySection = historyForPrompt
+    ? `\n## Historial de recomendaciones anteriores\n${historyForPrompt}\n\nInstrucciones sobre el historial:\n- NO repitas recomendaciones en estado IMPLEMENTADA o RECHAZADA\n- Para las EN PROGRESO: da seguimiento, variaciones o métricas de avance\n- Para las PENDIENTES con más de 7 días: re-prioriza o reemplaza con justificación\n- Enfoca los nuevos insights en áreas no abordadas aún\n`
+    : '';
 
   const systemPrompt = `Eres un consultor experto en performance de ventas y marketing digital B2B/B2C.
 Aplicas la Teoría de Restricciones (TOC): identifica el ÚNICO cuello de botella real antes de recomendar escalar.
@@ -79,7 +84,7 @@ ${funnelText}
 
 ## Alertas activas
 ${alertsText}
-
+${historySection}
 ---
 Analiza estos datos aplicando TOC. Identifica el cuello de botella que más limita el crecimiento.
 Responde exactamente en este JSON (sin markdown, solo JSON puro):

@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { Save, X, Bot, Building2, ChevronRight, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, X, Bot, Building2, Wrench, AlertCircle, CheckCircle2, Eye, EyeOff, ChevronDown, Database, Copy } from 'lucide-react';
 import { useBusinessContext } from '../hooks/useBusinessContext';
+import { useInstallerConfig } from '../hooks/useInstallerConfig';
 import { Button, Input, Select, Card } from './ui';
 import { AI_MODELS } from '../utils/constants';
 
 const TABS = [
   { id: 'negocio', label: 'Contexto del Negocio', icon: Building2 },
   { id: 'ia', label: 'IA & OpenRouter', icon: Bot },
+  { id: 'instalador', label: 'Instalador', icon: Wrench },
 ];
 
 const VERTICALS = [
@@ -17,6 +19,29 @@ const VERTICALS = [
   { value: 'agencia', label: 'Agencia / Servicios' },
   { value: 'ecommerce', label: 'E-commerce' },
   { value: 'otro', label: 'Otro' },
+];
+
+const CURRENCIES = [
+  { value: 'USD', locale: 'es-419', label: 'USD — Dólar' },
+  { value: 'CLP', locale: 'es-CL', label: 'CLP — Peso chileno' },
+  { value: 'PEN', locale: 'es-PE', label: 'PEN — Sol peruano' },
+  { value: 'MXN', locale: 'es-MX', label: 'MXN — Peso mexicano' },
+  { value: 'COP', locale: 'es-CO', label: 'COP — Peso colombiano' },
+  { value: 'ARS', locale: 'es-AR', label: 'ARS — Peso argentino' },
+  { value: 'EUR', locale: 'es-ES', label: 'EUR — Euro' },
+];
+
+const RECS_SCHEMA = [
+  { col: 'Titulo', type: 'Single line text', desc: 'Título de la recomendación' },
+  { col: 'Dato', type: 'Single line text', desc: 'Dato que sustenta el insight' },
+  { col: 'Accion', type: 'Long text', desc: 'Acción concreta a tomar' },
+  { col: 'Tipo', type: 'Single line text', desc: 'cuello_botella | insight | nota_estrategica' },
+  { col: 'Sesion_ID', type: 'Single line text', desc: 'Agrupa registros de un análisis' },
+  { col: 'Modelo_IA', type: 'Single line text', desc: 'Modelo de IA utilizado' },
+  { col: 'Estado', type: 'Single line text', desc: 'Pendiente | Aceptada | En Progreso | Implementada | Rechazada' },
+  { col: 'Nota_Cliente', type: 'Long text', desc: 'Comentarios del cliente' },
+  { col: 'Tokens_Sesion', type: 'Number', desc: 'Tokens usados en el análisis' },
+  { col: 'Costo_Sesion', type: 'Decimal', desc: 'Costo USD del análisis' },
 ];
 
 const AD_PLATFORMS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'YouTube'];
@@ -70,6 +95,23 @@ function CheckboxGroup({ label, options, selected, onChange }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function Collapsible({ title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-dark-700 rounded-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-dark-700/30 transition-colors text-left"
+      >
+        <span className="text-sm text-gray-300 font-medium">{title}</span>
+        <ChevronDown className={`w-4 h-4 text-dark-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-4 pb-4 pt-2 border-t border-dark-700">{children}</div>}
     </div>
   );
 }
@@ -224,7 +266,6 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
         options={AI_MODELS.map(m => ({ value: m.id, label: m.name }))}
       />
 
-      {/* Tabla de precios */}
       <div className="rounded-card border border-dark-700 overflow-hidden">
         <table className="w-full text-xs">
           <thead>
@@ -236,7 +277,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
             </tr>
           </thead>
           <tbody>
-            {AI_MODELS.map((m, i) => {
+            {AI_MODELS.map((m) => {
               const estCost = (1200 * m.inputPricePerM / 1_000_000) + (500 * m.outputPricePerM / 1_000_000);
               return (
                 <tr key={m.id} className={`border-t border-dark-700 ${local.aiModel === m.id ? 'bg-accent-orange/5' : ''}`}>
@@ -278,18 +319,179 @@ function IATab({ local, setLocal, testResult, onTest, isTesting }) {
   );
 }
 
+function SchemaHelper() {
+  const [copied, setCopied] = useState(false);
+  const names = RECS_SCHEMA.map(r => r.col).join(', ');
+  const copy = () => {
+    navigator.clipboard.writeText(names).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Collapsible title="Esquema de la tabla de recomendaciones (NocoDB)">
+      <p className="text-xs text-dark-400 mb-3 leading-relaxed">
+        Crea una tabla nueva en NocoDB con estas columnas exactamente. Los nombres son sensibles a mayúsculas.
+      </p>
+      <div className="rounded border border-dark-700 overflow-hidden mb-3">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-dark-700/50">
+              <th className="text-left p-2 text-dark-400">Columna</th>
+              <th className="text-left p-2 text-dark-400">Tipo NocoDB</th>
+              <th className="text-left p-2 text-dark-400 hidden sm:table-cell">Descripción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {RECS_SCHEMA.map(r => (
+              <tr key={r.col} className="border-t border-dark-700/50">
+                <td className="p-2 font-mono text-accent-orange">{r.col}</td>
+                <td className="p-2 text-gray-400">{r.type}</td>
+                <td className="p-2 text-dark-400 hidden sm:table-cell">{r.desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button
+        type="button"
+        onClick={copy}
+        className="flex items-center gap-1.5 text-xs text-dark-400 hover:text-gray-300 transition-colors"
+      >
+        <Copy className="w-3.5 h-3.5" />
+        {copied ? 'Copiado' : 'Copiar nombres de columnas'}
+      </button>
+    </Collapsible>
+  );
+}
+
+function InstaladorTab({ local, setLocal, isLoading }) {
+  const [showMapping, setShowMapping] = useState(false);
+
+  if (isLoading) {
+    return <div className="py-8 text-center text-dark-400 text-sm">Cargando configuración del servidor...</div>;
+  }
+
+  const setField = (key, value) => setLocal(p => ({ ...p, [key]: value }));
+  const setMapping = (field, value) => setLocal(p => ({
+    ...p,
+    field_mapping: { ...p.field_mapping, [field]: value },
+  }));
+
+  const currencyOpt = CURRENCIES.find(c => c.value === local.currency);
+
+  return (
+    <div className="space-y-5">
+      <div className="p-4 bg-accent-orange/8 border border-accent-orange/20 rounded-card text-xs text-dark-400 leading-relaxed">
+        Esta configuración se guarda en el servidor. Cámbiala desde el dashboard sin necesitar acceso SSH.
+      </div>
+
+      {/* Datos del cliente */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Nombre del cliente (interno)"
+          value={local.client_name || ''}
+          onChange={e => setField('client_name', e.target.value)}
+          placeholder="Ej: Clínica NutraSalud"
+        />
+        <Select
+          label="Moneda"
+          value={local.currency || 'USD'}
+          onChange={e => {
+            const c = CURRENCIES.find(x => x.value === e.target.value);
+            setLocal(p => ({ ...p, currency: e.target.value, currency_locale: c?.locale || 'es-419' }));
+          }}
+          options={CURRENCIES.map(c => ({ value: c.value, label: c.label }))}
+        />
+      </div>
+
+      {/* URLs NocoDB */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+          <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
+        </h4>
+        <Input
+          label="URL tabla Leads (endpoint completo /api/v1/db/data/...)"
+          value={local.nocodb_leads_url || ''}
+          onChange={e => setField('nocodb_leads_url', e.target.value)}
+          placeholder="https://crm.ejemplo.com/api/v1/db/data/noco/.../md_..."
+        />
+        <div>
+          <Input
+            label="URL tabla Recomendaciones IA"
+            value={local.nocodb_recs_url || ''}
+            onChange={e => setField('nocodb_recs_url', e.target.value)}
+            placeholder="https://crm.ejemplo.com/api/v1/db/data/noco/.../md_..."
+          />
+          {local.nocodb_recs_url && (
+            <p className="text-xs text-accent-green mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Historial IA activo
+            </p>
+          )}
+          {!local.nocodb_recs_url && (
+            <p className="text-xs text-dark-500 mt-1">Sin URL → el historial IA no estará disponible</p>
+          )}
+        </div>
+      </div>
+
+      {/* Schema helper */}
+      <SchemaHelper />
+
+      {/* Mapeo de campos */}
+      <Collapsible title="Mapeo de campos NocoDB (avanzado)">
+        <p className="text-xs text-dark-400 mb-4 leading-relaxed">
+          Si los nombres de columnas en tu tabla NocoDB son distintos a los valores por defecto, cámbialos aquí.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {Object.entries(local.field_mapping || {}).map(([key, val]) => (
+            <div key={key}>
+              <label className="block text-xs text-dark-500 mb-1">{key}</label>
+              <input
+                className="w-full bg-dark-700 border border-dark-600 rounded text-xs text-gray-300 px-3 py-2 focus:outline-none focus:border-accent-orange"
+                value={val}
+                onChange={e => setMapping(key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+    </div>
+  );
+}
+
 export default function Settings({ onClose }) {
   const { businessContext, saveBusinessContext } = useBusinessContext();
+  const { config: installerConfig, isLoading: isLoadingInstaller, saveConfig, isSaving: isSavingInstaller } = useInstallerConfig();
+
   const [activeTab, setActiveTab] = useState('negocio');
   const [local, setLocal] = useState({ ...businessContext });
+  const [localInstaller, setLocalInstaller] = useState({ ...installerConfig });
+  const [configSynced, setConfigSynced] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
 
-  const handleSave = () => {
-    saveBusinessContext({ ...local, onboardingComplete: true });
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onClose?.(); }, 1000);
+  // Sync localInstaller once the server config loads
+  useEffect(() => {
+    if (!isLoadingInstaller && !configSynced) {
+      setLocalInstaller({ ...installerConfig });
+      setConfigSynced(true);
+    }
+  }, [isLoadingInstaller, installerConfig, configSynced]);
+
+  const handleSave = async () => {
+    if (activeTab === 'instalador') {
+      const ok = await saveConfig(localInstaller);
+      if (ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } else {
+      saveBusinessContext({ ...local, onboardingComplete: true });
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose?.(); }, 1000);
+    }
   };
 
   const testConnection = async () => {
@@ -297,8 +499,10 @@ export default function Settings({ onClose }) {
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/models', {
-        headers: { 'Authorization': `Bearer ${local.openrouterKey}` },
+      const res = await fetch('/api/ai/test', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-openrouter-key': local.openrouterKey },
       });
       setTestResult(res.ok ? 'ok' : `Error ${res.status}`);
     } catch (e) {
@@ -308,14 +512,13 @@ export default function Settings({ onClose }) {
     }
   };
 
+  const isSaving = isSavingInstaller;
+
   return (
     <div className="fixed inset-0 z-50 flex">
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Panel slide-over */}
       <div className="relative ml-auto w-full max-w-2xl h-full bg-dark-800 border-l border-dark-700 flex flex-col shadow-2xl animate-in">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700">
           <h2 className="text-lg font-semibold text-gray-100">Ajustes del Dashboard</h2>
           <button onClick={onClose} className="p-2 hover:bg-dark-700 rounded-lg text-dark-400 hover:text-gray-200 transition-colors">
@@ -323,13 +526,12 @@ export default function Settings({ onClose }) {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-dark-700">
+        <div className="flex border-b border-dark-700 overflow-x-auto">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-accent-orange text-accent-orange'
                   : 'border-transparent text-dark-400 hover:text-gray-300'
@@ -341,20 +543,23 @@ export default function Settings({ onClose }) {
           ))}
         </div>
 
-        {/* Contenido */}
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'negocio' && <NegocioTab local={local} setLocal={setLocal} />}
           {activeTab === 'ia' && (
             <IATab local={local} setLocal={setLocal} testResult={testResult} onTest={testConnection} isTesting={isTesting} />
           )}
+          {activeTab === 'instalador' && (
+            <InstaladorTab local={localInstaller} setLocal={setLocalInstaller} isLoading={isLoadingInstaller && !configSynced} />
+          )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave}>
-            {saved ? <CheckCircle2 className="w-4 h-4 text-accent-green" /> : <Save className="w-4 h-4" />}
-            {saved ? 'Guardado' : 'Guardar ajustes'}
+          <Button onClick={handleSave} loading={isSaving} disabled={isSaving}>
+            {saved
+              ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> Guardado</>
+              : <><Save className="w-4 h-4" /> Guardar ajustes</>
+            }
           </Button>
         </div>
       </div>
