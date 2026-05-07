@@ -176,7 +176,7 @@ export default function AIDiagnosis({
       });
 
       const parsed = extractJSON(response.content);
-      const cd = estimateCost(response.usage, localModel);
+      const cd = estimateCost(response.usage, selectedModel);
       setResult(parsed);
       setCostData(cd);
 
@@ -186,7 +186,7 @@ export default function AIDiagnosis({
           bottleneck: parsed.bottleneck,
           insights: parsed.insights,
           strategic_note: parsed.strategic_note,
-          model: response.model || localModel,
+          model: response.model || selectedModel,
           usage: response.usage,
           costData: cd,
         });
