@@ -115,36 +115,60 @@ function Collapsible({ title, children, defaultOpen = false }) {
 }
 
 function LogoUpload({ logoUrl, onChange }) {
-  const fileRef = useState(null);
-  const inputRef = { current: null };
+  const inputRef = useRef(null);
+  const [status, setStatus] = useState(null); // null | 'loading' | 'ok' | 'error'
+  const [info, setInfo] = useState('');
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    if (file.size > 5 * 1024 * 1024) {
+      setStatus('error');
+      setInfo(`Imagen demasiado grande (${fileSizeMB} MB). Máximo 5 MB.`);
+      e.target.value = '';
+      return;
+    }
+
+    setStatus('loading');
+    setInfo('');
+
     const img = new Image();
-    const url = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setStatus('error');
+      setInfo('No se pudo leer la imagen. Prueba con otro archivo.');
+      e.target.value = '';
+    };
+
     img.onload = () => {
       const SIZE = 96;
       const canvas = document.createElement('canvas');
-      canvas.width = SIZE; canvas.height = SIZE;
+      canvas.width = SIZE;
+      canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
-      // Crop cuadrado centrado
       const min = Math.min(img.width, img.height);
       const sx = (img.width - min) / 2;
       const sy = (img.height - min) / 2;
       ctx.drawImage(img, sx, sy, min, min, 0, 0, SIZE, SIZE);
-      URL.revokeObjectURL(url);
-      onChange(canvas.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(objectUrl);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      onChange(dataUrl);
+      setStatus('ok');
+      setInfo(`${file.name} · ${img.width}×${img.height}px · ${fileSizeMB} MB → recortado a 96×96`);
+      e.target.value = '';
     };
-    img.src = url;
-    e.target.value = '';
+
+    img.src = objectUrl;
   };
 
   return (
     <div>
       <label className="block text-sm text-gray-400 mb-1.5">Logo del sidebar</label>
       <div className="flex items-center gap-3">
-        {/* Preview */}
         <div className="w-10 h-10 rounded-lg bg-accent-orange flex items-center justify-center shrink-0 overflow-hidden border border-dark-600">
           {logoUrl
             ? <img src={logoUrl} alt="logo" className="w-full h-full object-cover" />
@@ -155,15 +179,16 @@ function LogoUpload({ logoUrl, onChange }) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => document.getElementById('logo-file-input').click()}
-            className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors"
+            onClick={() => inputRef.current?.click()}
+            disabled={status === 'loading'}
+            className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors disabled:opacity-50"
           >
-            {logoUrl ? 'Cambiar imagen' : 'Subir imagen'}
+            {status === 'loading' ? 'Procesando...' : logoUrl ? 'Cambiar imagen' : 'Subir imagen'}
           </button>
           {logoUrl && (
             <button
               type="button"
-              onClick={() => onChange('')}
+              onClick={() => { onChange(''); setStatus(null); setInfo(''); }}
               className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-error/70 hover:text-error hover:border-error/30 transition-colors"
             >
               Quitar
@@ -171,15 +196,23 @@ function LogoUpload({ logoUrl, onChange }) {
           )}
         </div>
 
-        <input
-          id="logo-file-input"
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFile}
-        />
+        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFile} />
       </div>
-      <p className="text-xs text-dark-500 mt-1.5">PNG o JPG. Se recorta automáticamente a cuadrado.</p>
+
+      {/* Feedback */}
+      {status === 'ok' && (
+        <p className="text-xs text-accent-green mt-1.5 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" /> {info}
+        </p>
+      )}
+      {status === 'error' && (
+        <p className="text-xs text-error mt-1.5 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" /> {info}
+        </p>
+      )}
+      {!status && (
+        <p className="text-xs text-dark-500 mt-1.5">PNG, JPG o WebP · máx 5 MB · cualquier tamaño (se recorta al centro automáticamente)</p>
+      )}
     </div>
   );
 }
