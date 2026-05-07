@@ -5,7 +5,7 @@ import compression from 'compression';
 import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import dotenv from 'dotenv';
@@ -37,7 +37,10 @@ const NOCODB_API_TOKEN = process.env.NOCODB_API_TOKEN;
 // sin necesitar acceso SSH/EasyPanel después del deploy inicial.
 // ==========================================
 
-const CONFIG_PATH = join(__dirname, 'installer.config.json');
+// En producción Docker montar /app/data como volumen persistente en EasyPanel.
+const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..', 'data');
+const CONFIG_PATH = join(DATA_DIR, 'installer.config.json');
+mkdirSync(DATA_DIR, { recursive: true });
 
 const DEFAULT_CONFIG = {
   client_name: '',
