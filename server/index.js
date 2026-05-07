@@ -26,6 +26,7 @@ if (process.env.JWT_SECRET.length < 32) {
 }
 
 const app = express();
+app.set('trust proxy', 1); // EasyPanel/Nginx reverse proxy
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
