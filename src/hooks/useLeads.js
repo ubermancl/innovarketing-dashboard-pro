@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api/client';
 import { filterByDateRange, getDateRange } from '../utils/calculations';
+import { useBusinessContext } from './useBusinessContext';
 
 const STORAGE_KEY = 'ik_dashboard_leads_cache';
 
@@ -32,6 +33,7 @@ function saveToStorage(data) {
 }
 
 export function useLeads() {
+  const { businessContext } = useBusinessContext();
   const [leads, setLeads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -73,7 +75,7 @@ export function useLeads() {
       const response = await api.leads.getAll({
         limit: 1000,
         sort: '-CreatedAt',
-      });
+      }, businessContext.nocodbToken);
 
       const data = response.data || [];
       setLeads(data);

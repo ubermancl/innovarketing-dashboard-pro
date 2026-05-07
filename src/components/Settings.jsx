@@ -395,6 +395,244 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
   );
 }
 
+function NocoTokenField({ token, setToken }) {
+  const [editing, setEditing] = useState(!token);
+  const masked = token ? `••••••••••••••••••••${token.slice(-6)}` : '';
+
+  return (
+    <div>
+      <label className="block text-sm text-gray-400 mb-1.5">Token NocoDB (API key)</label>
+      {editing ? (
+        <div className="flex gap-2">
+          <input
+            className="flex-1 bg-dark-700 border border-dark-600 rounded-button px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-accent-orange placeholder:text-dark-500"
+            type="password"
+            value={token}
+            onChange={e => setToken(e.target.value)}
+            placeholder="Tu token xc-... de NocoDB"
+            autoFocus
+          />
+          {token && (
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="px-3 py-2 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors whitespace-nowrap"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 bg-dark-700 border border-dark-600 rounded-button px-3 py-2">
+          <span className="flex-1 font-mono text-sm text-dark-400 tracking-wider">{masked}</span>
+          <button
+            type="button"
+            onClick={() => { setToken(''); setEditing(true); }}
+            className="p-1 text-dark-500 hover:text-error transition-colors"
+            title="Limpiar y cambiar token"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      <p className="text-xs text-dark-500 mt-1">Se guarda en tu navegador — nunca se envía al servidor de forma permanente.</p>
+    </div>
+  );
+}
+
+function InstaladorTab({ token, setToken, local, setLocal, isLoading }) {
+  const [bases, setBases] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [connectResult, setConnectResult] = useState(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+
+  const connect = async () => {
+    if (!token || !local.nocodb_base_url) return;
+    setIsConnecting(true);
+    setConnectResult(null);
+    setBases([]);
+    setTables([]);
+    try {
+      const res = await fetch('/api/nocodb/connect', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-nocodb-token': token },
+        body: JSON.stringify({ base_url: local.nocodb_base_url }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setConnectResult(data.error || `Error ${res.status}`); return; }
+      setBases(data.bases || []);
+      setConnectResult('ok');
+    } catch (e) {
+      setConnectResult(e.message);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const loadTables = async (baseId) => {
+    if (!baseId || !token || !local.nocodb_base_url) return;
+    setIsLoadingTables(true);
+    setTables([]);
+    try {
+      const params = new URLSearchParams({ base_url: local.nocodb_base_url });
+      const res = await fetch(`/api/nocodb/bases/${baseId}/tables?${params}`, {
+        credentials: 'include',
+        headers: { 'x-nocodb-token': token },
+      });
+      const data = await res.json();
+      if (res.ok) setTables(data.tables || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingTables(false);
+    }
+  };
+
+  const handleBaseChange = (baseId) => {
+    setLocal(p => ({ ...p, nocodb_base_id: baseId, nocodb_leads_table_id: '', nocodb_recs_table_id: '' }));
+    loadTables(baseId);
+  };
+
+  if (isLoading) {
+    return <div className="py-8 text-center text-dark-400 text-sm">Cargando configuración del servidor...</div>;
+  }
+
+  const setField = (key, value) => setLocal(p => ({ ...p, [key]: value }));
+  const setMapping = (field, value) => setLocal(p => ({
+    ...p,
+    field_mapping: { ...p.field_mapping, [field]: value },
+  }));
+
+  return (
+    <div className="space-y-5">
+      <div className="p-4 bg-accent-orange/8 border border-accent-orange/20 rounded-card text-xs text-dark-400 leading-relaxed">
+        La configuración de la tabla se guarda en el servidor. El token solo vive en tu navegador.
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Nombre del cliente (interno)"
+          value={local.client_name || ''}
+          onChange={e => setField('client_name', e.target.value)}
+          placeholder="Ej: Clínica NutraSalud"
+        />
+        <Select
+          label="Moneda"
+          value={local.currency || 'USD'}
+          onChange={e => {
+            const c = CURRENCIES.find(x => x.value === e.target.value);
+            setLocal(p => ({ ...p, currency: e.target.value, currency_locale: c?.locale || 'es-419' }));
+          }}
+          options={CURRENCIES.map(c => ({ value: c.value, label: c.label }))}
+        />
+      </div>
+
+      {/* Conexión NocoDB */}
+      <div className="space-y-4 border border-dark-700 rounded-card p-4">
+        <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+          <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
+        </h4>
+
+        <NocoTokenField token={token} setToken={setToken} />
+
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <Input
+              label="URL base de NocoDB"
+              value={local.nocodb_base_url || ''}
+              onChange={e => { setField('nocodb_base_url', e.target.value); setConnectResult(null); setBases([]); setTables([]); }}
+              placeholder="https://crm.ejemplo.com"
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={connect}
+            loading={isConnecting}
+            disabled={!token || !local.nocodb_base_url || isConnecting}
+          >
+            Conectar
+          </Button>
+        </div>
+
+        {connectResult === 'ok' && bases.length === 0 && (
+          <p className="text-sm text-warning flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4" /> Conectado pero sin bases disponibles.
+          </p>
+        )}
+        {connectResult && connectResult !== 'ok' && (
+          <p className="text-sm text-error flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4" /> {connectResult}
+          </p>
+        )}
+
+        {/* Base selector */}
+        {bases.length > 0 && (
+          <Select
+            label="Base de datos"
+            value={local.nocodb_base_id || ''}
+            onChange={e => handleBaseChange(e.target.value)}
+            options={[{ value: '', label: 'Selecciona una base...' }, ...bases.map(b => ({ value: b.id, label: b.title }))]}
+          />
+        )}
+
+        {/* Table selectors */}
+        {(tables.length > 0 || isLoadingTables) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {isLoadingTables ? (
+              <p className="col-span-2 text-xs text-dark-400">Cargando tablas...</p>
+            ) : (
+              <>
+                <Select
+                  label="Tabla de Leads"
+                  value={local.nocodb_leads_table_id || ''}
+                  onChange={e => setField('nocodb_leads_table_id', e.target.value)}
+                  options={[{ value: '', label: 'Selecciona...' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
+                />
+                <Select
+                  label="Tabla de Recomendaciones IA"
+                  value={local.nocodb_recs_table_id || ''}
+                  onChange={e => setField('nocodb_recs_table_id', e.target.value)}
+                  options={[{ value: '', label: 'Selecciona (opcional)' }, ...tables.map(t => ({ value: t.id, label: t.title }))]}
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Status indicators */}
+        {local.nocodb_leads_table_id && (
+          <p className="text-xs text-accent-green flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Leads configurados
+            {local.nocodb_recs_table_id && ' · Recomendaciones configuradas'}
+          </p>
+        )}
+      </div>
+
+      <SchemaHelper />
+
+      <Collapsible title="Mapeo de campos NocoDB (avanzado)">
+        <p className="text-xs text-dark-400 mb-4 leading-relaxed">
+          Si los nombres de columnas en tu tabla son distintos a los valores por defecto, cámbialos aquí.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {Object.entries(local.field_mapping || {}).map(([key, val]) => (
+            <div key={key}>
+              <label className="block text-xs text-dark-500 mb-1">{key}</label>
+              <input
+                className="w-full bg-dark-700 border border-dark-600 rounded text-xs text-gray-300 px-3 py-2 focus:outline-none focus:border-accent-orange"
+                value={val}
+                onChange={e => setMapping(key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+    </div>
+  );
+}
+
 function SchemaHelper() {
   const [copied, setCopied] = useState(false);
   const names = RECS_SCHEMA.map(r => r.col).join(', ');
@@ -442,88 +680,6 @@ function SchemaHelper() {
   );
 }
 
-function InstaladorTab({ local, setLocal, isLoading }) {
-  if (isLoading) {
-    return <div className="py-8 text-center text-dark-400 text-sm">Cargando configuración del servidor...</div>;
-  }
-
-  const setField = (key, value) => setLocal(p => ({ ...p, [key]: value }));
-  const setMapping = (field, value) => setLocal(p => ({
-    ...p,
-    field_mapping: { ...p.field_mapping, [field]: value },
-  }));
-
-  return (
-    <div className="space-y-5">
-      <div className="p-4 bg-accent-orange/8 border border-accent-orange/20 rounded-card text-xs text-dark-400 leading-relaxed">
-        Esta configuración se guarda en el servidor. Cámbiala desde el dashboard sin necesitar acceso SSH.
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Nombre del cliente (interno)"
-          value={local.client_name || ''}
-          onChange={e => setField('client_name', e.target.value)}
-          placeholder="Ej: Clínica NutraSalud"
-        />
-        <Select
-          label="Moneda"
-          value={local.currency || 'USD'}
-          onChange={e => {
-            const c = CURRENCIES.find(x => x.value === e.target.value);
-            setLocal(p => ({ ...p, currency: e.target.value, currency_locale: c?.locale || 'es-419' }));
-          }}
-          options={CURRENCIES.map(c => ({ value: c.value, label: c.label }))}
-        />
-      </div>
-
-      <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-300 flex items-center gap-2">
-          <Database className="w-4 h-4 text-dark-400" /> Conexión NocoDB
-        </h4>
-        <Input
-          label="URL tabla Leads (endpoint completo /api/v1/db/data/...)"
-          value={local.nocodb_leads_url || ''}
-          onChange={e => setField('nocodb_leads_url', e.target.value)}
-          placeholder="https://crm.ejemplo.com/api/v1/db/data/noco/.../md_..."
-        />
-        <div>
-          <Input
-            label="URL tabla Recomendaciones IA"
-            value={local.nocodb_recs_url || ''}
-            onChange={e => setField('nocodb_recs_url', e.target.value)}
-            placeholder="https://crm.ejemplo.com/api/v1/db/data/noco/.../md_..."
-          />
-          {local.nocodb_recs_url
-            ? <p className="text-xs text-accent-green mt-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Historial IA activo</p>
-            : <p className="text-xs text-dark-500 mt-1">Sin URL → el historial IA no estará disponible</p>
-          }
-        </div>
-      </div>
-
-      <SchemaHelper />
-
-      <Collapsible title="Mapeo de campos NocoDB (avanzado)">
-        <p className="text-xs text-dark-400 mb-4 leading-relaxed">
-          Si los nombres de columnas en tu tabla NocoDB son distintos a los valores por defecto, cámbialos aquí.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Object.entries(local.field_mapping || {}).map(([key, val]) => (
-            <div key={key}>
-              <label className="block text-xs text-dark-500 mb-1">{key}</label>
-              <input
-                className="w-full bg-dark-700 border border-dark-600 rounded text-xs text-gray-300 px-3 py-2 focus:outline-none focus:border-accent-orange"
-                value={val}
-                onChange={e => setMapping(key, e.target.value)}
-              />
-            </div>
-          ))}
-        </div>
-      </Collapsible>
-    </div>
-  );
-}
-
 export default function Settings({ onClose }) {
   const { businessContext, saveBusinessContext } = useBusinessContext();
   const { config: installerConfig, isLoading: isLoadingInstaller, saveConfig, isSaving: isSavingInstaller } = useInstallerConfig();
@@ -549,6 +705,8 @@ export default function Settings({ onClose }) {
     if (activeTab === 'instalador') {
       const ok = await saveConfig(localInstaller);
       if (ok) {
+        // Guarda el token NocoDB en localStorage (igual que el token de OpenRouter)
+        saveBusinessContext({ nocodbToken: local.nocodbToken });
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
@@ -630,7 +788,13 @@ export default function Settings({ onClose }) {
             />
           )}
           {activeTab === 'instalador' && (
-            <InstaladorTab local={localInstaller} setLocal={setLocalInstaller} isLoading={isLoadingInstaller && !configSynced} />
+            <InstaladorTab
+              token={local.nocodbToken || ''}
+              setToken={v => setLocal(p => ({ ...p, nocodbToken: v }))}
+              local={localInstaller}
+              setLocal={setLocalInstaller}
+              isLoading={isLoadingInstaller && !configSynced}
+            />
           )}
         </div>
 

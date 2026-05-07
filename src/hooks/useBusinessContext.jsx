@@ -18,6 +18,7 @@ const DEFAULT_CONTEXT = {
   monthlyGoal: '',        // USD
   mainChannel: '',        // orgánico | pagado | referidos | mixto
   openrouterKey: '',
+  nocodbToken: '',
   aiModel: AI_MODELS[0].id,
   onboardingComplete: false,
 };

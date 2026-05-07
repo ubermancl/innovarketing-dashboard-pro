@@ -4,10 +4,11 @@ const DEFAULT = {
   client_name: '',
   currency: 'USD',
   currency_locale: 'es-419',
-  nocodb_leads_url: '',
-  nocodb_recs_url: '',
-  nocodb_token_configured: false,
-  env_leads_url: '',
+  nocodb_base_url: '',
+  nocodb_base_id: '',
+  nocodb_leads_table_id: '',
+  nocodb_recs_table_id: '',
+  nocodb_token_env_configured: false,
   field_mapping: {
     estadoCRM: 'Estado CRM',
     montoVenta: 'Monto Venta Cerrada (PEN)',
@@ -64,8 +65,8 @@ export function useInstallerConfig() {
     }
   }, []);
 
-  const recsConfigured = Boolean(config.nocodb_recs_url);
-  const leadsConfigured = Boolean(config.nocodb_leads_url || config.env_leads_url);
+  const leadsConfigured = Boolean(config.nocodb_leads_table_id && config.nocodb_base_url);
+  const recsConfigured = Boolean(config.nocodb_recs_table_id && config.nocodb_base_url);
 
   return { config, isLoading, isSaving, error, saveConfig, fetchConfig, recsConfigured, leadsConfigured };
 }

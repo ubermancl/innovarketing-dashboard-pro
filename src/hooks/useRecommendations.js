@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchRecommendations, createRecommendations, updateRecommendation, generateSessionId } from '../api/recommendations';
+import { useBusinessContext } from './useBusinessContext';
 
 export function useRecommendations(recsConfigured) {
+  const { businessContext } = useBusinessContext();
   const [recommendations, setRecommendations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -12,7 +14,7 @@ export function useRecommendations(recsConfigured) {
     if (!recsConfigured) { setNotConfigured(true); return; }
     setIsLoading(true);
     try {
-      const { data, notConfigured: nc } = await fetchRecommendations(100);
+      const { data, notConfigured: nc } = await fetchRecommendations(100, businessContext.nocodbToken);
       setRecommendations(data);
       setNotConfigured(nc);
       setError(null);
@@ -83,7 +85,7 @@ export function useRecommendations(recsConfigured) {
     }
 
     try {
-      await createRecommendations(records);
+      await createRecommendations(records, businessContext.nocodbToken);
       // Recargar la lista para mostrar los nuevos registros
       await load();
       return sessionId;
@@ -100,7 +102,7 @@ export function useRecommendations(recsConfigured) {
     const update = { Estado: estado };
     if (nota !== undefined) update.Nota_Cliente = nota;
     try {
-      await updateRecommendation(id, update);
+      await updateRecommendation(id, update, businessContext.nocodbToken);
       setRecommendations(prev =>
         prev.map(r => r.Id === id ? { ...r, Estado: estado, ...(nota !== undefined ? { Nota_Cliente: nota } : {}) } : r)
       );

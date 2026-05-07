@@ -75,7 +75,7 @@ export const api = {
 
   // Leads
   leads: {
-    getAll: async (params = {}) => {
+    getAll: async (params = {}, nocodbToken = '') => {
       const searchParams = new URLSearchParams();
 
       if (params.limit) searchParams.set('limit', params.limit);
@@ -85,8 +85,9 @@ export const api = {
 
       const queryString = searchParams.toString();
       const url = `${API_URL}/leads${queryString ? `?${queryString}` : ''}`;
+      const headers = nocodbToken ? { 'x-nocodb-token': nocodbToken } : {};
 
-      return fetchWithRetry(url);
+      return fetchWithRetry(url, { headers });
     },
   },
 };

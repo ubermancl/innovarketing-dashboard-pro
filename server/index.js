@@ -29,15 +29,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
-const NOCODB_API_TOKEN = process.env.NOCODB_API_TOKEN;
+// NOCODB_API_TOKEN en .env es fallback de compatibilidad; se prefiere el token del header
+const NOCODB_API_TOKEN_ENV = process.env.NOCODB_API_TOKEN || '';
 
 // ==========================================
 // INSTALLER CONFIG — archivo server-side persistente
-// Separado del .env para que el instalador pueda configurar desde el dashboard
-// sin necesitar acceso SSH/EasyPanel después del deploy inicial.
 // ==========================================
 
-// En producción Docker montar /app/data como volumen persistente en EasyPanel.
 const DATA_DIR = process.env.DATA_DIR || join(__dirname, '..', 'data');
 const CONFIG_PATH = join(DATA_DIR, 'installer.config.json');
 mkdirSync(DATA_DIR, { recursive: true });
@@ -46,8 +44,10 @@ const DEFAULT_CONFIG = {
   client_name: '',
   currency: 'USD',
   currency_locale: 'es-419',
-  nocodb_leads_url: '',
-  nocodb_recs_url: '',
+  nocodb_base_url: '',        // https://crm.ejemplo.com
+  nocodb_base_id: '',         // ID del proyecto/base en NocoDB
+  nocodb_leads_table_id: '',  // ID de la tabla de Leads
+  nocodb_recs_table_id: '',   // ID de la tabla de Recomendaciones IA
   field_mapping: {
     estadoCRM: 'Estado CRM',
     montoVenta: 'Monto Venta Cerrada (PEN)',
@@ -73,11 +73,25 @@ function writeConfig(config) {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
 }
 
-// Resuelve la URL de leads: config file tiene prioridad sobre .env
-// Así el instalador puede cambiar la tabla sin SSH
-function getLeadsUrl() {
-  const cfg = readConfig();
-  return cfg.nocodb_leads_url || process.env.NOCODB_API_URL || '';
+// Token NocoDB: viene del header del cliente (localStorage) o del .env como fallback
+function getNocodbToken(req) {
+  return req.headers['x-nocodb-token'] || NOCODB_API_TOKEN_ENV;
+}
+
+// Construye la URL de records de NocoDB v2 desde los IDs guardados en config
+function buildLeadsUrl(cfg) {
+  if (cfg.nocodb_base_url && cfg.nocodb_leads_table_id) {
+    return `${cfg.nocodb_base_url}/api/v2/tables/${cfg.nocodb_leads_table_id}/records`;
+  }
+  // Fallback: env var legacy
+  return process.env.NOCODB_API_URL || '';
+}
+
+function buildRecsUrl(cfg) {
+  if (cfg.nocodb_base_url && cfg.nocodb_recs_table_id) {
+    return `${cfg.nocodb_base_url}/api/v2/tables/${cfg.nocodb_recs_table_id}/records`;
+  }
+  return '';
 }
 
 // ==========================================
@@ -128,12 +142,12 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// Helper para proxear requests a NocoDB
-async function nocodbRequest(url, method = 'GET', body = null) {
-  if (!NOCODB_API_TOKEN) throw new Error('NOCODB_API_TOKEN no configurado en .env');
+async function nocodbRequest(url, method = 'GET', body = null, token = '') {
+  const tok = token || NOCODB_API_TOKEN_ENV;
+  if (!tok) throw new Error('Token NocoDB no configurado. Ingresa el token en Ajustes → Instalador.');
   const options = {
     method,
-    headers: { 'xc-token': NOCODB_API_TOKEN, 'Content-Type': 'application/json' },
+    headers: { 'xc-token': tok, 'Content-Type': 'application/json' },
   };
   if (body) options.body = JSON.stringify(body);
   const response = await fetch(url, options);
@@ -153,8 +167,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    nocodb_leads: getLeadsUrl() ? 'configured' : 'not_configured',
-    nocodb_recs: cfg.nocodb_recs_url ? 'configured' : 'not_configured',
+    nocodb_leads: buildLeadsUrl(cfg) ? 'configured' : 'not_configured',
+    nocodb_recs: buildRecsUrl(cfg) ? 'configured' : 'not_configured',
     client: cfg.client_name || 'unnamed',
   });
 });
@@ -186,20 +200,22 @@ app.get('/api/auth/verify', authenticateToken, (req, res) => res.json({ authenti
 // INSTALLER CONFIG
 // ==========================================
 
-// Devuelve la config del instalador — sin el token NocoDB (que vive en .env)
 app.get('/api/installer/config', authenticateToken, (req, res) => {
   const cfg = readConfig();
   res.json({
     ...cfg,
-    nocodb_token_configured: Boolean(NOCODB_API_TOKEN),
-    // El env URL original (puede estar vacío si el instalador usa config file)
-    env_leads_url: process.env.NOCODB_API_URL || '',
+    nocodb_token_env_configured: Boolean(NOCODB_API_TOKEN_ENV),
   });
 });
 
 app.put('/api/installer/config', authenticateToken, (req, res) => {
   const current = readConfig();
-  const allowed = ['client_name', 'currency', 'currency_locale', 'nocodb_leads_url', 'nocodb_recs_url', 'field_mapping'];
+  const allowed = [
+    'client_name', 'currency', 'currency_locale',
+    'nocodb_base_url', 'nocodb_base_id',
+    'nocodb_leads_table_id', 'nocodb_recs_table_id',
+    'field_mapping',
+  ];
   const updates = {};
   allowed.forEach(key => { if (req.body[key] !== undefined) updates[key] = req.body[key]; });
   const next = { ...current, ...updates };
@@ -208,12 +224,61 @@ app.put('/api/installer/config', authenticateToken, (req, res) => {
 });
 
 // ==========================================
-// PROXY LEADS (NocoDB)
+// NOCODB DISCOVERY — lista bases y tablas
+// ==========================================
+
+app.post('/api/nocodb/connect', authenticateToken, async (req, res) => {
+  const token = getNocodbToken(req);
+  const { base_url } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token NocoDB requerido en el header x-nocodb-token' });
+  if (!base_url) return res.status(400).json({ error: 'base_url requerida' });
+
+  try {
+    const url = `${base_url.replace(/\/$/, '')}/api/v1/db/meta/projects/`;
+    const response = await fetch(url, { headers: { 'xc-token': token } });
+    if (!response.ok) {
+      return res.status(response.status).json({ error: `NocoDB respondió ${response.status} — verifica la URL y el token` });
+    }
+    const data = await response.json();
+    const bases = (data.list || []).map(b => ({ id: b.id, title: b.title }));
+    res.json({ success: true, bases });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/nocodb/bases/:baseId/tables', authenticateToken, async (req, res) => {
+  const token = getNocodbToken(req);
+  const { base_url } = req.query;
+  const { baseId } = req.params;
+  if (!token) return res.status(400).json({ error: 'Token NocoDB requerido' });
+  if (!base_url) return res.status(400).json({ error: 'base_url requerida como query param' });
+
+  try {
+    const url = `${base_url.replace(/\/$/, '')}/api/v1/db/meta/projects/${baseId}/tables`;
+    const response = await fetch(url, { headers: { 'xc-token': token } });
+    if (!response.ok) {
+      return res.status(response.status).json({ error: `NocoDB respondió ${response.status}` });
+    }
+    const data = await response.json();
+    const tables = (data.list || []).map(t => ({ id: t.id, title: t.title }));
+    res.json({ success: true, tables });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// PROXY LEADS
 // ==========================================
 
 app.get('/api/leads', authenticateToken, async (req, res) => {
-  const leadsUrl = getLeadsUrl();
-  if (!leadsUrl) return res.status(500).json({ error: 'URL de leads no configurada. Ve a Ajustes → Instalador.' });
+  const cfg = readConfig();
+  const leadsUrl = buildLeadsUrl(cfg);
+  if (!leadsUrl) return res.status(500).json({ error: 'NocoDB no configurado. Ve a Ajustes → Instalador.' });
+
+  const token = getNocodbToken(req);
+  if (!token) return res.status(400).json({ error: 'Token NocoDB no encontrado. Ingresa el token en Ajustes → Instalador.' });
 
   try {
     const url = new URL(leadsUrl);
@@ -223,7 +288,7 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
     if (req.query.offset) url.searchParams.set('offset', req.query.offset);
     if (req.query.fields) url.searchParams.set('fields', req.query.fields);
 
-    const data = await nocodbRequest(url.toString());
+    const data = await nocodbRequest(url.toString(), 'GET', null, token);
     res.json({ success: true, timestamp: new Date().toISOString(), count: data.list?.length || 0, pageInfo: data.pageInfo || null, data: data.list || [] });
   } catch (error) {
     res.status(500).json({ error: 'Error conectando a NocoDB (leads)', details: error.message });
@@ -231,44 +296,52 @@ app.get('/api/leads', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// PROXY RECOMENDACIONES (NocoDB)
+// PROXY RECOMENDACIONES
 // ==========================================
 
 app.get('/api/recommendations', authenticateToken, async (req, res) => {
   const cfg = readConfig();
-  if (!cfg.nocodb_recs_url) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada. Ve a Ajustes → Instalador.' });
+  const recsUrl = buildRecsUrl(cfg);
+  if (!recsUrl) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada. Ve a Ajustes → Instalador.' });
+
+  const token = getNocodbToken(req);
+  if (!token) return res.status(400).json({ error: 'Token NocoDB no encontrado.' });
 
   try {
-    const url = new URL(cfg.nocodb_recs_url);
+    const url = new URL(recsUrl);
     url.searchParams.set('limit', req.query.limit || '100');
     url.searchParams.set('sort', '-CreatedAt');
-    const data = await nocodbRequest(url.toString());
+    const data = await nocodbRequest(url.toString(), 'GET', null, token);
     res.json({ success: true, data: data.list || [], count: data.list?.length || 0 });
   } catch (error) {
     res.status(500).json({ error: 'Error conectando a NocoDB (recomendaciones)', details: error.message });
   }
 });
 
-// Crear una o varias recomendaciones (body puede ser un objeto o un array)
 app.post('/api/recommendations', authenticateToken, async (req, res) => {
   const cfg = readConfig();
-  if (!cfg.nocodb_recs_url) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada.' });
+  const recsUrl = buildRecsUrl(cfg);
+  if (!recsUrl) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada.' });
+
+  const token = getNocodbToken(req);
+  if (!token) return res.status(400).json({ error: 'Token NocoDB no encontrado.' });
 
   try {
-    // NocoDB v2 acepta array o objeto en el body del POST
     const payload = Array.isArray(req.body) ? req.body : [req.body];
-    const data = await nocodbRequest(cfg.nocodb_recs_url, 'POST', payload);
+    const data = await nocodbRequest(recsUrl, 'POST', payload, token);
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ error: 'Error guardando recomendación', details: error.message });
   }
 });
 
-// Actualizar estado de una recomendación (Estado, Nota_Cliente)
-// NocoDB v2 bulk PATCH acepta un array con el Id del registro
 app.patch('/api/recommendations/:id', authenticateToken, async (req, res) => {
   const cfg = readConfig();
-  if (!cfg.nocodb_recs_url) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada.' });
+  const recsUrl = buildRecsUrl(cfg);
+  if (!recsUrl) return res.status(404).json({ error: 'Tabla de recomendaciones no configurada.' });
+
+  const token = getNocodbToken(req);
+  if (!token) return res.status(400).json({ error: 'Token NocoDB no encontrado.' });
 
   const { Estado, Nota_Cliente } = req.body;
   const rowId = parseInt(req.params.id, 10);
@@ -278,8 +351,7 @@ app.patch('/api/recommendations/:id', authenticateToken, async (req, res) => {
     const update = { Id: rowId };
     if (Estado !== undefined) update.Estado = Estado;
     if (Nota_Cliente !== undefined) update.Nota_Cliente = Nota_Cliente;
-
-    const data = await nocodbRequest(cfg.nocodb_recs_url, 'PATCH', [update]);
+    const data = await nocodbRequest(recsUrl, 'PATCH', [update], token);
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ error: 'Error actualizando recomendación', details: error.message });
@@ -330,7 +402,6 @@ app.post('/api/ai/diagnose', authenticateToken, aiLimiter, async (req, res) => {
   }
 });
 
-// Test de conexión OpenRouter — valida la key sin hacer una llamada de IA completa
 app.post('/api/ai/test', authenticateToken, aiLimiter, async (req, res) => {
   const openrouterKey = req.headers['x-openrouter-key'];
   if (!openrouterKey) return res.status(400).json({ error: 'API key requerida' });
@@ -373,7 +444,8 @@ app.listen(PORT, () => {
   console.log(`\n🟠 Innovarketing Dashboard Pro`);
   console.log(`   Puerto: ${PORT} | Modo: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Cliente: ${cfg.client_name || '(sin configurar)'}`);
-  console.log(`   Leads: ${getLeadsUrl() ? '✅' : '⚠️  Configura en Ajustes → Instalador'}`);
-  console.log(`   Recomendaciones: ${cfg.nocodb_recs_url ? '✅' : '⚠️  Configura en Ajustes → Instalador'}`);
+  console.log(`   Leads: ${buildLeadsUrl(cfg) ? '✅' : '⚠️  Configura en Ajustes → Instalador'}`);
+  console.log(`   Recomendaciones: ${buildRecsUrl(cfg) ? '✅' : '⚠️  Configura en Ajustes → Instalador'}`);
+  console.log(`   Token NocoDB: ${NOCODB_API_TOKEN_ENV ? '✅ env var' : '⚠️  debe venir del cliente'}`);
   console.log(`   Seguridad: helmet + rate-limit ✅\n`);
 });
