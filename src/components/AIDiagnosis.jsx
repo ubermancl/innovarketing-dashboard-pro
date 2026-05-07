@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Sparkles, Brain, AlertCircle, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle2, Info, ChevronDown, Bot, X } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, Brain, AlertCircle, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle2, Info } from 'lucide-react';
 import { Card, Button } from './ui';
 import { useBusinessContext } from '../hooks/useBusinessContext';
 import { callOpenRouter, buildDiagnosisPrompt } from '../api/openrouter';
@@ -137,138 +137,6 @@ function DiagnosisInfo() {
   );
 }
 
-function ModelPicker({ modelId, onSelect, openrouterKey }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [dynamicModels, setDynamicModels] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const allModels = dynamicModels.length > 0 ? dynamicModels : AI_MODELS;
-  const current = allModels.find(m => m.id === modelId) || { id: modelId, name: modelId.split('/').pop(), free: false };
-
-  const fetchModels = async () => {
-    if (loaded || loading || !openrouterKey) return;
-    setLoading(true);
-    try {
-      const res = await fetch('/api/ai/test', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'x-openrouter-key': openrouterKey },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.models?.length) setDynamicModels(data.models);
-      }
-    } catch {}
-    setLoading(false);
-    setLoaded(true);
-  };
-
-  const handleOpen = () => {
-    setOpen(v => !v);
-    if (!loaded) fetchModels();
-  };
-
-  // Cerrar al hacer clic afuera
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (!dropdownRef.current?.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const filtered = allModels.filter(m =>
-    !search ||
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.id.toLowerCase().includes(search.toLowerCase()) ||
-    (search.toLowerCase() === 'free' || search.toLowerCase() === 'gratis' ? m.free : false)
-  );
-
-  const formatPrice = (m) => {
-    if (m.free) return <span className="text-accent-green text-xs font-medium">GRATIS</span>;
-    const price = (m.inputPricePerM || 0).toFixed(3);
-    return <span className="text-dark-500 text-xs">${price}/M</span>;
-  };
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={handleOpen}
-        className="flex items-center gap-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button px-2.5 py-1.5 text-gray-300 hover:border-dark-500 transition-colors max-w-[220px]"
-        title="Cambiar modelo de IA"
-      >
-        <Bot className="w-3 h-3 text-dark-400 shrink-0" />
-        <span className="truncate">{current.name || current.id.split('/').pop()}</span>
-        {current.free && <span className="text-accent-green text-xs shrink-0">·G</span>}
-        <ChevronDown className={`w-3 h-3 text-dark-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute top-8 left-0 z-40 w-80 bg-dark-800 border border-dark-700 rounded-card shadow-2xl">
-          {/* Search */}
-          <div className="p-2 border-b border-dark-700 flex items-center gap-2">
-            <input
-              autoFocus
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder='Buscar modelo... ("gratis" para gratuitos)'
-              className="flex-1 bg-dark-700 border border-dark-600 rounded px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-dark-500 focus:outline-none focus:border-accent-orange"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="text-dark-500 hover:text-gray-400">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* List */}
-          <div className="max-h-64 overflow-y-auto">
-            {loading && (
-              <div className="flex items-center justify-center gap-2 py-6 text-dark-400 text-xs">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Cargando modelos...
-              </div>
-            )}
-            {!loading && filtered.length === 0 && (
-              <p className="text-center py-4 text-xs text-dark-500">Sin resultados</p>
-            )}
-            {!loading && filtered.map(m => {
-              const verified = VERIFIED_IDS.has(m.id);
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => { onSelect(m.id); setOpen(false); setSearch(''); }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-dark-700 transition-colors ${
-                    m.id === modelId ? 'bg-accent-orange/10' : ''
-                  }`}
-                >
-                  <div className="min-w-0 mr-2">
-                    <div className="flex items-center gap-1.5">
-                      <p className={`text-xs font-medium truncate ${m.id === modelId ? 'text-accent-orange' : 'text-gray-200'}`}>
-                        {m.name || m.id.split('/').pop()}
-                      </p>
-                      {verified && <span className="text-accent-green text-xs shrink-0" title="Verificado compatible">✓</span>}
-                    </div>
-                    <p className="text-xs text-dark-500 truncate">{m.id}</p>
-                  </div>
-                  <div className="shrink-0">{formatPrice(m)}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="px-3 py-2 border-t border-dark-700">
-            <p className="text-xs text-dark-500">
-              {loaded ? `${allModels.length} modelos · ` : ''}<span className="text-accent-green">✓</span> = verificado compatible · cambio solo para este análisis
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function AIDiagnosis({
   metrics, advancedMetrics, funnelData, alerts,
   historyForPrompt, recsConfigured, onSaveSession,
@@ -281,10 +149,10 @@ export default function AIDiagnosis({
   const [isSaving, setIsSaving] = useState(false);
   const [savedSessionId, setSavedSessionId] = useState(null);
   const [error, setError] = useState(null);
-  // Modelo seleccionado localmente — no persiste en businessContext
-  const [localModel, setLocalModel] = useState(businessContext?.aiModel || AI_MODELS[0].id);
 
   const hasKey = Boolean(businessContext?.openrouterKey);
+  const selectedModel = businessContext?.aiModel || AI_MODELS[0].id;
+  const modelName = AI_MODELS.find(m => m.id === selectedModel)?.name || selectedModel.split('/').pop();
 
   const runDiagnosis = async () => {
     if (!hasKey) return;
@@ -301,7 +169,7 @@ export default function AIDiagnosis({
       });
 
       const response = await callOpenRouter({
-        model: localModel,
+        model: selectedModel,
         systemPrompt,
         userPrompt,
         openrouterKey: businessContext.openrouterKey,
@@ -369,26 +237,18 @@ export default function AIDiagnosis({
               <DiagnosisInfo />
             </div>
             <p className="text-xs text-dark-400">
-              {DATE_FILTER_LABELS[dateFilter] || 'período seleccionado'}
+              {modelName} · {DATE_FILTER_LABELS[dateFilter] || 'período seleccionado'}
               {recsConfigured && <span className="text-accent-green"> · historial activo</span>}
             </p>
           </div>
         </div>
 
-        {/* Controls row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <ModelPicker
-            modelId={localModel}
-            onSelect={setLocalModel}
-            openrouterKey={businessContext.openrouterKey}
-          />
-          <Button onClick={runDiagnosis} loading={isLoading} disabled={isLoading || isSaving} size="sm">
-            {isLoading
-              ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Analizando...</>
-              : <><Sparkles className="w-3.5 h-3.5" /> Analizar ahora</>
-            }
-          </Button>
-        </div>
+        <Button onClick={runDiagnosis} loading={isLoading} disabled={isLoading || isSaving} size="sm">
+          {isLoading
+            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Analizando...</>
+            : <><Sparkles className="w-3.5 h-3.5" /> Analizar ahora</>
+          }
+        </Button>
       </div>
 
       {error && (
