@@ -1,248 +1,187 @@
-# Guía de Instalación — Dashboard CRM
+# Guía de Deploy — Innovarketing Dashboard Pro v2.0
 
-> **Autor:** Javier Vrandečić — Consultor en Automatización IA | [Innovarketing.com](https://innovarketing.com)
-> **Stack:** React + Vite · Express · NocoDB · Docker · Easypanel
+> Stack: React + Vite · Express · NocoDB · Docker · EasyPanel
+> Instalado y configurado 100% desde el dashboard — sin SSH después del deploy inicial.
 
 ---
 
 ## Prerequisitos
 
-- Cuenta en [GitHub](https://github.com)
-- Servidor con [Easypanel](https://easypanel.io) instalado
-- Instancia de NocoDB con la tabla de leads del cliente configurada
-- Node.js 20+ (solo para desarrollo local)
+- Repo en GitHub: `ubermancl/innovarketing-dashboard-pro` (público)
+- VPS con EasyPanel + Docker instalado
+- Instancia NocoDB del cliente con la tabla de leads lista
+- API Token de NocoDB del cliente
 
 ---
 
-## Paso 1 — Crear el repositorio del nuevo cliente
+## Paso 1 — Crear el servicio en EasyPanel
 
-### Opción A: Duplicar desde GitHub (recomendado)
-1. Ir a `https://github.com/ubermancl/nutraclinics-dashboard`
-2. Hacer clic en el botón **Use this template** → **Create a new repository**
-3. Nombrar el repositorio: `cliente-dashboard` (ej: `clinicavital-dashboard`)
-4. Visibilidad: **Private**
-5. Clic en **Create repository**
-
-### Opción B: Clonar manualmente
-```bash
-git clone https://github.com/ubermancl/nutraclinics-dashboard.git nuevo-cliente-dashboard
-cd nuevo-cliente-dashboard
-# Desconectar del repo original y conectar al nuevo
-git remote set-url origin https://github.com/TU_USUARIO/nuevo-cliente-dashboard.git
-git push -u origin main
-```
+1. EasyPanel → **New Service** → **App**
+2. En **Fuente** seleccionar **GitHub**
+3. Completar:
+   - **Propietario**: `ubermancl`
+   - **Repositorio**: `innovarketing-dashboard-pro`
+   - **Rama**: `main`
+   - **Ruta de compilación**: `/` (dejar con la barra)
+4. En **Compilación** seleccionar **Dockerfile**
+   - **Nombre**: `Dockerfile`
+   - **Ruta**: `/Dockerfile`
+5. Guardar
 
 ---
 
-## Paso 2 — Personalizar el branding del cliente
+## Paso 2 — Variables de entorno
 
-Abrir el archivo `src/config/client.js`:
+En la pestaña **Entorno** agregar:
 
-```js
-export const CLIENT_CONFIG = {
-  name: 'NombreDelCliente',   // ← Nombre que aparece en el header y en el PDF
-  logo: '🥗',                  // ← Emoji del logo (cambiar según rubro)
-  logoUrl: null,               // ← URL de imagen si tienen logo propio
-                               //   Ej: '/logo.png' (colocar en /public)
-                               //   Ej: 'https://cliente.com/logo.png'
-};
+```
+NOCODB_API_TOKEN=<token xc-token del NocoDB del cliente>
+DASHBOARD_PASSWORD=<contraseña de acceso para el cliente>
+JWT_SECRET=<cadena aleatoria mínimo 32 caracteres>
+NODE_ENV=production
+PORT=3000
 ```
 
-**Emojis sugeridos por rubro:**
-| Rubro | Emoji |
-|-------|-------|
-| Nutrición / Salud | 🥗 🥦 🍎 |
-| Clínica / Médico | 🏥 ⚕️ 💊 |
-| Fitness / Gym | 💪 🏋️ |
-| Dental | 🦷 |
-| Psicología | 🧠 |
-| Estética / Belleza | 💆 ✨ |
-| Legal | ⚖️ |
-| Inmobiliaria | 🏠 |
+> **Generar JWT_SECRET seguro:**
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
 
-Guardar los cambios y hacer commit:
-
-```bash
-git add src/config/client.js
-git commit -m "Branding: configurar cliente [nombre]"
-git push
-```
+> **NOCODB_API_URL no es necesario** — la URL de la tabla se configura desde el dashboard en Ajustes → Instalador.
 
 ---
 
-## Paso 3 — Variables de entorno necesarias
+## Paso 3 — Volumen persistente
 
-Estas variables se configuran en Easypanel (NO en el código).
-Referencia: archivo `.env.example` en la raíz del proyecto.
+En la pestaña **Almacenamiento** → **Puntos de montaje** → **Montaje de volumen**:
 
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `NOCODB_API_URL` | URL completa de la tabla de leads en NocoDB | `https://crm.cliente.pe/api/v2/tables/TABLA_ID/records` |
-| `NOCODB_API_TOKEN` | Token xc-token de NocoDB (Settings → Tokens) | `xGh2k3...` |
-| `DASHBOARD_PASSWORD` | Contraseña de acceso al dashboard para el cliente | `cliente2024!` |
-| `JWT_SECRET` | Cadena aleatoria de mínimo 32 caracteres para firmar sesiones | Ver generador abajo |
-| `NODE_ENV` | Modo de ejecución | `production` |
-| `PORT` | Puerto interno del servidor | `3000` |
+- **Nombre**: `appdata` (solo letras y números, sin guiones)
+- **Ruta**: `/app/data`
 
-### Generar JWT_SECRET seguro
-```bash
-# En cualquier terminal:
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-Copiar el resultado (64 caracteres) como valor de `JWT_SECRET`.
-
-### Obtener NOCODB_API_URL
-1. En NocoDB, abrir la tabla de leads del cliente
-2. Clic en **Details** (esquina superior derecha) → **REST APIs**
-3. Copiar la URL que termina en `/records`
-
-### Obtener NOCODB_API_TOKEN
-1. En NocoDB → **Team & Settings** → **API Tokens**
-2. Crear nuevo token o copiar uno existente
-3. El token comienza con `xc-...`
+Este volumen guarda la configuración del instalador (URLs NocoDB, nombre del cliente, moneda) entre deploys. Sin él se pierde al rebuildar.
 
 ---
 
-## Paso 4 — Configurar la app en Easypanel
+## Paso 4 — Dominio
 
-### 4.1 Crear la aplicación
-1. En Easypanel → **Projects** → seleccionar o crear proyecto
-2. Clic en **+ Create Service** → **App**
-3. Nombre del servicio: `cliente-dashboard`
-4. Clic en **Create**
+En la pestaña **Dominios**:
 
-### 4.2 Conectar con GitHub
-1. En la app creada → pestaña **Source**
-2. Clic en **Connect GitHub**
-3. Seleccionar el repositorio: `nuevo-cliente-dashboard`
-4. Branch: `main`
-5. Build method: **Dockerfile** (se detecta automáticamente)
-6. Guardar
+1. Agregar el dominio del cliente (ej: `demo.innovarketing.com`)
+2. Marcar como **principal**
+3. En el DNS del cliente crear registro tipo **A**:
+   - **Host**: `demo` (o el subdominio elegido)
+   - **Valor**: IP del VPS
+   - **TTL**: 3600
 
-### 4.3 Configurar variables de entorno
-1. Pestaña **Environment**
-2. Agregar una por una las variables del Paso 3:
-   ```
-   NOCODB_API_URL     = https://...
-   NOCODB_API_TOKEN   = xc-...
-   DASHBOARD_PASSWORD = contraseña_segura
-   JWT_SECRET         = cadena_de_64_caracteres
-   NODE_ENV           = production
-   PORT               = 3000
-   ```
-3. Clic en **Save**
-
-### 4.4 Primer deploy
-1. Pestaña **Deployments**
-2. Clic en **Deploy** (o se activa automáticamente al guardar)
-3. Ver los logs en tiempo real — el build tarda ~2-3 min
-4. Cuando aparezca `🥗 Dashboard Server` en los logs, la app está lista
+EasyPanel gestiona el SSL (Let's Encrypt) automáticamente.
 
 ---
 
-## Paso 5 — Configurar la puerta de entrada (dominio)
+## Paso 5 — Implementar
 
-### 5.1 Subdominio propio (recomendado)
-1. En Easypanel → app → pestaña **Domains**
-2. Clic en **Add Domain**
-3. Ingresar: `dashboard.cliente.com`
-4. Easypanel genera automáticamente el certificado SSL (Let's Encrypt)
-5. En el DNS del cliente, crear un registro:
-   ```
-   Tipo: CNAME
-   Nombre: dashboard
-   Valor: tu-servidor.easypanel.host
-   TTL: 3600
-   ```
+Clic en **Implementar**. El build tarda ~2-3 minutos. Seguir los logs hasta ver:
 
-### 5.2 Subdominio en tu servidor (más rápido)
-1. En Easypanel → app → pestaña **Domains**
-2. Usar el dominio generado automáticamente: `cliente-dashboard.TU_SERVIDOR.easypanel.host`
-3. No requiere configuración DNS adicional
-
-### 5.3 Puerto de acceso
-El servidor expone el puerto `3000` internamente.
-Easypanel maneja el proxy y el HTTPS — **no necesitas exponer el puerto al exterior**.
-
----
-
-## Paso 6 — Verificar el funcionamiento
-
-### Health check manual
-Abrir en el navegador:
 ```
-https://dashboard.cliente.com/api/health
-```
-Respuesta esperada:
-```json
-{ "status": "ok", "timestamp": "2026-02-20T..." }
-```
-
-### Login
-1. Abrir `https://dashboard.cliente.com`
-2. Ingresar la contraseña configurada en `DASHBOARD_PASSWORD`
-3. Verificar que los leads cargan correctamente
-
-### Diagnóstico si algo falla
-```
-❌ "Error al cargar datos" → Revisar NOCODB_API_URL y NOCODB_API_TOKEN
-❌ Login no funciona     → Revisar DASHBOARD_PASSWORD y JWT_SECRET
-❌ Página en blanco      → Ver logs en Easypanel → Deployments
-❌ Build falla           → Ver logs de build, posible error en node_modules
+🟠 Innovarketing Dashboard Pro
+   Puerto: 3000 | Modo: production
+   Cliente: (sin configurar)
+   Leads: ⚠️  Configura en Ajustes → Instalador
+   Recomendaciones: ⚠️  Configura en Ajustes → Instalador
 ```
 
 ---
 
-## Paso 7 — Auto-deploy al hacer cambios
+## Paso 6 — Configuración inicial desde el dashboard
 
-Una vez conectado GitHub, cada `git push` al branch `main` dispara un deploy automático en Easypanel.
+1. Abrir el dominio configurado
+2. Login con la `DASHBOARD_PASSWORD` del paso 2
+3. Ir a **Ajustes** (ícono esquina superior derecha) → pestaña **Instalador**
+4. Completar:
+   - **Nombre del cliente**: nombre interno del negocio
+   - **Moneda**: la del país del cliente
+   - **URL tabla Leads**: endpoint completo de NocoDB `/api/v2/tables/.../records`
+   - **URL tabla Recomendaciones IA** (opcional): si ya creaste la tabla en NocoDB
+5. Guardar — el dashboard carga los datos inmediatamente
 
-**Flujo de trabajo para actualizaciones:**
-```bash
-# 1. Hacer cambios localmente (branding, features, etc.)
-# 2. Subir a GitHub
-git add .
-git commit -m "Actualización para [cliente]"
-git push origin main
-# 3. Easypanel detecta el push y redespliega automáticamente (~2-3 min)
+> **Cómo obtener la URL de la tabla NocoDB:**
+> NocoDB → abrir la tabla → Details → REST APIs → copiar la URL que termina en `/records`
+
+---
+
+## Paso 7 — Tabla de recomendaciones IA (opcional)
+
+Si el cliente usará el Diagnóstico IA con historial, crear una tabla nueva en su NocoDB con estas columnas exactas:
+
+| Columna | Tipo NocoDB |
+|---------|-------------|
+| Titulo | Single line text |
+| Dato | Single line text |
+| Accion | Long text |
+| Tipo | Single line text |
+| Sesion_ID | Single line text |
+| Modelo_IA | Single line text |
+| Estado | Single line text |
+| Nota_Cliente | Long text |
+| Tokens_Sesion | Number |
+| Costo_Sesion | Decimal |
+
+Luego pegar la URL de esa tabla en Ajustes → Instalador → URL tabla Recomendaciones IA.
+
+---
+
+## Paso 8 — Configuración del cliente (Ajustes → Contexto del Negocio)
+
+El cliente completa desde su navegador (se guarda en localStorage):
+- Nombre del negocio, vertical, país, ciudad
+- Ticket promedio, meta mensual, tamaño del equipo
+- Plataformas de ads, inversión mensual
+
+Y en **IA & OpenRouter**:
+- API Key de OpenRouter (se guarda solo en su navegador)
+- Modelo de IA preferido
+
+---
+
+## Checklist de instalación
+
+```
+[ ] Servicio creado en EasyPanel (GitHub → main → Dockerfile)
+[ ] Variables de entorno configuradas (4 variables mínimas)
+[ ] Volumen persistente montado en /app/data (nombre: appdata)
+[ ] Dominio configurado + DNS apuntando a la IP del VPS
+[ ] Implementar → build exitoso
+[ ] Login probado con DASHBOARD_PASSWORD
+[ ] Ajustes → Instalador → URL tabla Leads guardada
+[ ] Health check: https://dominio/api/health responde { "status": "ok" }
+[ ] Dashboard carga datos del CRM del cliente
+[ ] (Opcional) Tabla recomendaciones creada en NocoDB y URL configurada
+[ ] (Opcional) Cliente configuró su API key de OpenRouter
 ```
 
 ---
 
-## Resumen rápido (checklist)
+## Diagnóstico de errores comunes
+
+| Error | Causa probable | Solución |
+|-------|---------------|----------|
+| "Error al cargar datos" | URL de leads incorrecta o token inválido | Ajustes → Instalador → revisar URL y token |
+| Login no funciona | DASHBOARD_PASSWORD mal copiada | Revisar variable en EasyPanel → Entorno |
+| Página en blanco | Error en el build | Ver logs en EasyPanel → Deployments |
+| "NOCODB_API_TOKEN no configurado" | Falta la variable en EasyPanel | Agregar NOCODB_API_TOKEN en Entorno → Reimplementar |
+| Config se pierde al reimplementar | Volumen no montado | Verificar montaje en /app/data |
+| Diagnóstico IA no guarda historial | URL recomendaciones no configurada | Ajustes → Instalador → URL tabla Recomendaciones |
+
+---
+
+## Deploy para cliente NutraClinic (referencia)
 
 ```
-[ ] Repositorio creado en GitHub (desde template)
-[ ] src/config/client.js actualizado con nombre y logo del cliente
-[ ] Commit y push del branding al repo
-[ ] App creada en Easypanel y conectada al repo
-[ ] Variables de entorno configuradas (5 variables)
-[ ] Primer deploy exitoso (health check responde OK)
-[ ] Dominio configurado (subdominio o custom domain)
-[ ] Login probado con la contraseña del cliente
-[ ] URL entregada al cliente
+Dominio:             demo.innovarketing.com
+NOCODB_API_TOKEN:    ikSwEjVGYEmOinLPhweaIn7VSHQCcBeOz8br9UG-
+URL tabla leads:     https://crm.nutraclinic.pe/api/v2/tables/mpbgjqphs0yncva/records
+DASHBOARD_PASSWORD:  nutraclinic2026
 ```
 
 ---
 
-## Archivos clave del proyecto
-
-```
-dashboard/
-├── src/
-│   ├── config/
-│   │   └── client.js          ← BRANDING: nombre, logo, logoUrl
-│   ├── components/            ← Componentes React del dashboard
-│   ├── hooks/                 ← useLeads, useStats, useAuth
-│   └── utils/
-│       └── calculations.js    ← Toda la lógica de cálculo de métricas
-├── server/
-│   └── index.js               ← Servidor Express (proxy NocoDB + auth)
-├── .env.example               ← Referencia de variables de entorno
-├── Dockerfile                 ← Build multistage para producción
-└── DEPLOYMENT.md              ← Esta guía
-```
-
----
-
-*Guía mantenida por Javier Vrandečić — [Innovarketing.com](https://innovarketing.com)*
+*Innovarketing Dashboard Pro — Javier Vrandečić · [innovarketing.com](https://innovarketing.com)*
