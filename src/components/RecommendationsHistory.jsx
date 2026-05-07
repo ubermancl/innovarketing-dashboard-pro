@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { History, ChevronDown, Zap, AlertTriangle, Loader2, StickyNote, Trash2, X } from 'lucide-react';
+import { History, ChevronDown, Zap, AlertTriangle, Loader2, StickyNote, Trash2, X, Bot } from 'lucide-react';
 import { Card } from './ui';
 import { formatDateTime } from '../utils/formatters';
 
@@ -257,11 +257,19 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
             <p className="text-sm font-medium text-gray-200">
               {date ? formatDateTime(date) : 'Sesión sin fecha'}
             </p>
-            <p className="text-xs text-dark-400">
-              {model.split('/').pop()} · {session.records.length} registro{session.records.length !== 1 ? 's' : ''}
-              {pendientes > 0 && <span className="text-warning ml-2">· {pendientes} pendiente{pendientes !== 1 ? 's' : ''}</span>}
-              {implementadas > 0 && <span className="text-accent-green ml-2">· {implementadas} implementada{implementadas !== 1 ? 's' : ''}</span>}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              {model && (
+                <span className="flex items-center gap-1 text-xs bg-dark-700 border border-dark-600 rounded px-1.5 py-0.5 text-dark-300">
+                  <Bot className="w-3 h-3 text-dark-400" />
+                  {model.split('/').pop()}
+                </span>
+              )}
+              <span className="text-xs text-dark-500">
+                {session.records.length} registro{session.records.length !== 1 ? 's' : ''}
+                {pendientes > 0 && <span className="text-warning"> · {pendientes} pendiente{pendientes !== 1 ? 's' : ''}</span>}
+                {implementadas > 0 && <span className="text-accent-green"> · {implementadas} implementada{implementadas !== 1 ? 's' : ''}</span>}
+              </span>
+            </div>
           </div>
         </div>
 

@@ -452,7 +452,7 @@ app.post('/api/ai/diagnose', authenticateToken, aiLimiter, async (req, res) => {
         ],
         temperature: 0.3,
         max_tokens: 1500,
-        response_format: { type: 'json_object' },
+        // No enviamos response_format para mantener compatibilidad con modelos gratuitos
       }),
     });
 
