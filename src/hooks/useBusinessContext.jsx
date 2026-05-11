@@ -1,61 +1,69 @@
-import { useState, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { AI_MODELS } from '../utils/constants';
-
-const CONTEXT_KEY = 'ik_business_context';
 
 const DEFAULT_CONTEXT = {
   businessName: '',
-  logoUrl: '',        // URL de imagen o vacío para usar las iniciales
-  logoInitials: '',   // Ej: "IK", "NC" — si está vacío se auto-genera desde businessName
-  logoColor: '#F97316', // Color de fondo del avatar cuando no hay imagen
+  logoUrl: '',
+  logoInitials: '',
+  logoColor: '#F97316',
   country: '',
   city: '',
-  vertical: '',           // clínica | inmobiliaria | academia | retail | agencia | ecommerce | otro
-  businessModel: '',      // B2B | B2C
-  avgTicket: '',          // USD
+  vertical: '',
+  businessModel: '',
+  avgTicket: '',
   recurring: false,
-  avgClientLifetime: '',  // meses
-  monthlyAdSpend: '',     // USD
-  adPlatforms: [],        // Meta | Google | TikTok | ninguna
+  avgClientLifetime: '',
+  monthlyAdSpend: '',
+  adPlatforms: [],
   teamSize: '',
-  monthlyGoal: '',        // USD
-  mainChannel: '',        // orgánico | pagado | referidos | mixto
+  monthlyGoal: '',
+  mainChannel: '',
   openrouterKey: '',
-  nocodbToken: '',
   aiModel: AI_MODELS[0].id,
   onboardingComplete: false,
 };
 
-function loadContext() {
-  try {
-    const raw = localStorage.getItem(CONTEXT_KEY);
-    if (!raw) return DEFAULT_CONTEXT;
-    return { ...DEFAULT_CONTEXT, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_CONTEXT;
-  }
-}
-
 const BusinessContextCtx = createContext(null);
 
 export function BusinessContextProvider({ children }) {
-  const [businessContext, setBusinessContextState] = useState(loadContext);
+  const [businessContext, setBusinessContextState] = useState(DEFAULT_CONTEXT);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/business-context', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setBusinessContextState(prev => ({ ...DEFAULT_CONTEXT, ...prev, ...data }));
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const saveBusinessContext = useCallback((updates) => {
     setBusinessContextState(prev => {
       const next = { ...prev, ...updates };
-      try { localStorage.setItem(CONTEXT_KEY, JSON.stringify(next)); } catch {}
+      fetch('/api/business-context', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      }).catch(() => {});
       return next;
     });
   }, []);
 
   const resetBusinessContext = useCallback(() => {
-    localStorage.removeItem(CONTEXT_KEY);
     setBusinessContextState(DEFAULT_CONTEXT);
+    fetch('/api/business-context', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(DEFAULT_CONTEXT),
+    }).catch(() => {});
   }, []);
 
   return (
-    <BusinessContextCtx.Provider value={{ businessContext, saveBusinessContext, resetBusinessContext }}>
+    <BusinessContextCtx.Provider value={{ businessContext, saveBusinessContext, resetBusinessContext, isLoading }}>
       {children}
     </BusinessContextCtx.Provider>
   );

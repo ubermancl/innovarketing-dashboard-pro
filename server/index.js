@@ -225,6 +225,32 @@ app.put('/api/installer/config', authenticateToken, (req, res) => {
 });
 
 // ==========================================
+// BUSINESS CONTEXT — persiste por cuenta (no por dispositivo)
+// ==========================================
+
+const BC_PATH = join(DATA_DIR, 'business-context.json');
+
+function readBusinessContext() {
+  try {
+    if (!existsSync(BC_PATH)) return {};
+    return JSON.parse(readFileSync(BC_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+app.get('/api/business-context', authenticateToken, (req, res) => {
+  res.json(readBusinessContext());
+});
+
+app.put('/api/business-context', authenticateToken, (req, res) => {
+  const current = readBusinessContext();
+  const next = { ...current, ...req.body };
+  writeFileSync(BC_PATH, JSON.stringify(next, null, 2), 'utf8');
+  res.json({ success: true });
+});
+
+// ==========================================
 // NOCODB DISCOVERY — lista bases y tablas (requiere token de usuario, no de base)
 // ==========================================
 

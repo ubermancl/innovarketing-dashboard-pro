@@ -75,7 +75,7 @@ export function useLeads() {
       const response = await api.leads.getAll({
         limit: 1000,
         sort: '-CreatedAt',
-      }, businessContext.nocodbToken);
+      });
 
       const data = response.data || [];
       setLeads(data);
