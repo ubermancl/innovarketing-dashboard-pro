@@ -199,15 +199,17 @@ function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
   if (!isAuthenticated) return <Login />;
-  return <Dashboard />;
+  return (
+    <BusinessContextProvider>
+      <Dashboard />
+    </BusinessContextProvider>
+  );
 }
 
 export default function App() {
   return (
-    <BusinessContextProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BusinessContextProvider>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
