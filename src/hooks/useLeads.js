@@ -98,17 +98,17 @@ export function useLeads() {
     }
   }, []);
 
-  // Cargar al montar
+  // Cargar al montar y refrescar cada 30 segundos
   useEffect(() => {
-    // Intentar cargar desde cache primero para mostrar algo rápido
     const cached = getFromStorage();
     if (cached) {
       setLeads(cached);
       setIsLoading(false);
     }
-
-    // Luego cargar datos frescos
     fetchLeads();
+
+    const interval = setInterval(() => fetchLeads(true), 30_000);
+    return () => clearInterval(interval);
   }, [fetchLeads]);
 
   // Refrescar datos
