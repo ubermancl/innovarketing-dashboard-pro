@@ -528,8 +528,24 @@ app.post('/api/ai/test', authenticateToken, aiLimiter, async (req, res) => {
 
 if (process.env.NODE_ENV === 'production') {
   const distPath = join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (req, res) => res.sendFile(join(distPath, 'index.html')));
+  // Hashed assets: cache 1 year. index.html: no-cache so browsers always get fresh hashes.
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      } else if (/\/assets\//.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
+  // SPA fallback — only serve index.html for non-asset paths
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/assets/')) {
+      return res.status(404).send('Asset not found');
+    }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.sendFile(join(distPath, 'index.html'));
+  });
 }
 
 // ==========================================
