@@ -1,5 +1,25 @@
-import { useState } from 'react';
+import { useState, Component } from 'react';
 import { useAuth, AuthProvider } from './hooks/useAuth';
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(err) { return { error: err }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: '2rem', background: '#0E0D16', color: '#fff', minHeight: '100vh', fontFamily: 'monospace' }}>
+          <h2 style={{ color: '#F97316' }}>⚠ Error al cargar el dashboard</h2>
+          <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', marginTop: '1rem' }}>
+            {this.state.error.message}
+            {'\n\n'}
+            {this.state.error.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { useLeads } from './hooks/useLeads';
 import { useStats } from './hooks/useStats';
 import { useBusinessContext, BusinessContextProvider } from './hooks/useBusinessContext';
@@ -195,8 +215,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
