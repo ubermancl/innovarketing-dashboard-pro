@@ -205,10 +205,9 @@ function Dashboard() {
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
-  if (!isAuthenticated) return <Login />;
   return (
     <BusinessContextProvider>
-      <Dashboard />
+      {!isAuthenticated ? <Login /> : <Dashboard />}
     </BusinessContextProvider>
   );
 }
