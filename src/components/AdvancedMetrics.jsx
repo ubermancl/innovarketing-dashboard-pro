@@ -92,7 +92,7 @@ export default function AdvancedMetrics({ metrics }) {
           />
           <MiniCard
             title="Hora Pico"
-            value={peakHour != null ? `${peakHour}:00 h` : '—'}
+            value={peakHour != null ? `${peakHour} h` : '—'}
             icon={Clock3}
             tooltip="Hora con más leads. Responder en la primera hora tiene 7× más conversión."
           />

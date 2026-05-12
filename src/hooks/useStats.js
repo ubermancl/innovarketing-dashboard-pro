@@ -36,8 +36,7 @@ export function useStats(leads, dateFilter = 'month', customStart = null, custom
   const leadsByDay = useMemo(() => calculateLeadsByDay(leads, 30), [leads]);
 
   const appointmentsByDay = useMemo(() => {
-    const leadsWithAppointments = leads.filter(l => l['Fecha de agendamiento']);
-    return calculateLeadsByDay(leadsWithAppointments, 30);
+    return calculateLeadsByDay(leads, 30, 'Fecha de agendamiento');
   }, [leads]);
 
   const revenueByWeek = useMemo(() => {

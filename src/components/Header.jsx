@@ -191,19 +191,21 @@ export default function Header({
             </div>
           )}
 
-          {/* PDF */}
-          <button
-            onClick={exportPDF}
-            disabled={isExporting}
-            className="flex items-center gap-2 px-3 py-2 rounded-button bg-dark-700 border border-dark-600 text-sm text-gray-300 hover:border-dark-500 transition-colors disabled:opacity-50"
-            title="Exportar PDF"
-          >
-            {isExporting
-              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              : <FileDown className="w-3.5 h-3.5" />
-            }
-            <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'PDF'}</span>
-          </button>
+          {/* PDF — solo en vistas con datos visuales */}
+          {(activeView === 'dashboard' || activeView === 'analytics') && (
+            <button
+              onClick={exportPDF}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-3 py-2 rounded-button bg-dark-700 border border-dark-600 text-sm text-gray-300 hover:border-dark-500 transition-colors disabled:opacity-50"
+              title="Exportar PDF"
+            >
+              {isExporting
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <FileDown className="w-3.5 h-3.5" />
+              }
+              <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'PDF'}</span>
+            </button>
+          )}
         </div>
       </div>
 

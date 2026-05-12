@@ -302,7 +302,7 @@ export function calculateDistribution(leads, field) {
 /**
  * Calcular leads por día para gráfico de tendencias
  */
-export function calculateLeadsByDay(leads, days = 30) {
+export function calculateLeadsByDay(leads, days = 30, dateField = 'CreatedAt') {
   if (!leads || !Array.isArray(leads)) return [];
 
   const result = [];
@@ -315,8 +315,8 @@ export function calculateLeadsByDay(leads, days = 30) {
 
     const count = leads.filter(lead => {
       try {
-        const createdAt = parseISO(lead['CreatedAt']);
-        return isValid(createdAt) && isWithinInterval(createdAt, { start, end });
+        const d = parseISO(lead[dateField]);
+        return isValid(d) && isWithinInterval(d, { start, end });
       } catch {
         return false;
       }
@@ -423,6 +423,8 @@ export function calculateAdvancedMetrics(leads) {
   const recoveryRate = retargetedLeads.length > 0 ? recoveredLeads.length / retargetedLeads.length : null;
   const recoveredRevenue = recoveredLeads.reduce((sum, l) => sum + (parseFloat(l['Monto Venta Cerrada (PEN)']) || 0), 0);
 
+  const notBought = leads.filter(l => l['Estado CRM'] === 'No Compró').length;
+
   return {
     avgTimeToSchedule,
     noShowRate,
@@ -435,6 +437,7 @@ export function calculateAdvancedMetrics(leads) {
     recoveredCount: recoveredLeads.length,
     recoveredRevenue,
     retargetedCount: retargetedLeads.length,
+    notBought,
   };
 }
 

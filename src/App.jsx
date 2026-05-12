@@ -92,7 +92,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* ── Vista: Resumen ── */}
+        {/* ── Vista: Resumen — visión operacional rápida ── */}
         {activeView === 'dashboard' && (
           <>
             {isRefreshing ? (
@@ -110,24 +110,11 @@ function Dashboard() {
               />
             )}
             <Alerts alerts={stats.alerts} />
-            <AdvancedMetrics metrics={stats.advancedMetrics} />
-            {isRefreshing ? <SkeletonChart /> : (
-              <Charts
-                funnelData={stats.funnelData}
-                pipelineData={stats.pipelineData}
-                leadsByDay={stats.leadsByDay}
-                appointmentsByDay={stats.appointmentsByDay}
-                revenueByWeek={stats.revenueByWeek}
-                statusDistribution={stats.statusDistribution}
-                districtDistribution={stats.districtDistribution}
-                originDistribution={stats.originDistribution}
-              />
-            )}
             <Insights insights={stats.insights} />
           </>
         )}
 
-        {/* ── Vista: Análisis ── */}
+        {/* ── Vista: Análisis — métricas avanzadas y gráficos ── */}
         {activeView === 'analytics' && (
           <>
             <AdvancedMetrics metrics={stats.advancedMetrics} />
