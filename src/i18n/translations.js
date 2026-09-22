@@ -27,6 +27,9 @@ export const translations = {
     periodo_all_desc: 'Todo el registro histórico',
     periodo_seleccionar: 'Selector de período',
     sin_conexion: 'Sin conexión — mostrando última información guardada',
+    alertas: 'Alertas',
+    urgente: 'urgente',
+    urgentes: 'urgentes',
 
     // Cards / metricas principales
     metric_total_leads: 'Total Leads',
@@ -92,7 +95,7 @@ export const translations = {
     por_origen: 'Por Origen',
     otros: 'Otros',
     como_se_calcula: '¿Cómo se calcula?',
-    en_conversacion_nota: '(incluye todos los que iniciaron — casi siempre ≈ total)',
+    en_conversacion_nota: 'incluye todos los que iniciaron — casi siempre ≈ total',
     funnel_pie: 'El % es la tasa de conversión respecto al paso anterior.',
     funnel_pie_hint: 'Pasa el cursor sobre el % para ver la explicación.',
     distribucion_pie: 'Dónde está cada lead',
@@ -245,6 +248,9 @@ export const translations = {
     periodo_all_desc: 'Full historical record',
     periodo_seleccionar: 'Date range selector',
     sin_conexion: 'No connection — showing last saved data',
+    alertas: 'Alerts',
+    urgente: 'urgent',
+    urgentes: 'urgent',
 
     metric_total_leads: 'Total Leads',
     metric_leads_periodo: 'Leads (period)',
@@ -307,7 +313,7 @@ export const translations = {
     por_origen: 'By Source',
     otros: 'Other',
     como_se_calcula: 'How is this calculated?',
-    en_conversacion_nota: '(includes everyone who started — almost always ≈ total)',
+    en_conversacion_nota: 'includes everyone who started — almost always ≈ total',
     funnel_pie: 'The % is the conversion rate relative to the previous step.',
     funnel_pie_hint: 'Hover over the % to see the explanation.',
     distribucion_pie: 'Where each lead is',

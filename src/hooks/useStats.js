@@ -13,7 +13,7 @@ import {
   calculateAIvsManual,
 } from '../utils/calculations';
 
-export function useStats(leads, dateFilter = 'month', customStart = null, customEnd = null, businessContext = null) {
+export function useStats(leads, dateFilter = 'month', customStart = null, customEnd = null, businessContext = null, lang = 'es') {
   const metrics = useMemo(() => {
     const base = calculateMetrics(leads, dateFilter, customStart, customEnd);
     // Añadir CAC si hay ad spend configurado
@@ -21,8 +21,8 @@ export function useStats(leads, dateFilter = 'month', customStart = null, custom
     return { ...base, cac };
   }, [leads, dateFilter, customStart, customEnd, businessContext]);
 
-  const funnelData = useMemo(() => calculateFunnel(leads), [leads]);
-  const pipelineData = useMemo(() => calculatePipeline(leads), [leads]);
+  const funnelData = useMemo(() => calculateFunnel(leads, lang), [leads, lang]);
+  const pipelineData = useMemo(() => calculatePipeline(leads, lang), [leads, lang]);
 
   const statusDistribution = useMemo(() => calculateDistribution(leads, 'Estado CRM'), [leads]);
   const districtDistribution = useMemo(() => calculateDistribution(leads, 'Distrito Usado Para Calificar'), [leads]);
@@ -58,10 +58,10 @@ export function useStats(leads, dateFilter = 'month', customStart = null, custom
       .slice(-8);
   }, [leads]);
 
-  const advancedMetrics = useMemo(() => calculateAdvancedMetrics(leads), [leads]);
+  const advancedMetrics = useMemo(() => calculateAdvancedMetrics(leads, lang), [leads, lang]);
   const aiVsManual = useMemo(() => calculateAIvsManual(leads), [leads]);
-  const alerts = useMemo(() => generateAlerts(leads), [leads]);
-  const insights = useMemo(() => generateInsights(leads, advancedMetrics), [leads, advancedMetrics]);
+  const alerts = useMemo(() => generateAlerts(leads, lang), [leads, lang]);
+  const insights = useMemo(() => generateInsights(leads, advancedMetrics, lang), [leads, advancedMetrics, lang]);
 
   return {
     metrics,

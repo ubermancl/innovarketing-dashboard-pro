@@ -44,7 +44,7 @@ import { SkeletonCard, SkeletonChart, SkeletonTable } from './components/ui/Skel
 
 function Dashboard() {
   const { logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { businessContext } = useBusinessContext();
   const { recsConfigured } = useInstallerConfig();
   const [showSettings, setShowSettings] = useState(false);
@@ -60,7 +60,7 @@ function Dashboard() {
   const stats = useStats(
     allLeads, dateFilter,
     customDateRange.start, customDateRange.end,
-    businessContext,
+    businessContext, lang,
   );
 
   const {

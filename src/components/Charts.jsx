@@ -47,7 +47,7 @@ const CustomTooltip = ({ active, payload, label, formatter }) => {
 
 // ─── Componente reutilizable: barra de funnel ─────────────────────────────────
 function FunnelBar({ item, index, totalCount, colorOffset = 0, badgeValue, badgeTitle, tooltipFor }) {
-  const { t, statusLabel } = useLanguage();
+  const { t, statusLabel, lang } = useLanguage();
   const [hovered, setHovered] = useState(false);
   const widthPercent = totalCount > 0 ? (item.count / totalCount) * 100 : 0;
   const color = CHART_COLORS[(index + colorOffset) % CHART_COLORS.length];
@@ -58,7 +58,7 @@ function FunnelBar({ item, index, totalCount, colorOffset = 0, badgeValue, badge
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-300 font-medium">{statusLabel(item.state)}</span>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-gray-100">{formatNumber(item.count)}</span>
+          <span className="font-mono text-gray-100">{formatNumber(item.count, lang)}</span>
           <div
             className="relative"
             onMouseEnter={() => setHovered(true)}
@@ -100,7 +100,7 @@ function FunnelBar({ item, index, totalCount, colorOffset = 0, badgeValue, badge
 
 // ─── Funnel de Conversión (acumulativo) ──────────────────────────────────────
 function ConversionFunnel({ data }) {
-  const { t, statusLabel, funnelTooltip } = useLanguage();
+  const { t, statusLabel, funnelTooltip, lang } = useLanguage();
   const totalItem   = data.find(d => d.state === 'Total Leads');
   const enConvItem  = data.find(d => d.state === 'En Conversación');
   const funnelItems = data.filter(d => d.state !== 'Total Leads' && d.state !== 'En Conversación');
@@ -114,7 +114,7 @@ function ConversionFunnel({ data }) {
           <span className="text-sm font-semibold text-gray-100">{t('total_leads_label')}</span>
           <span className="text-xs text-gray-600">{t('base_100')}</span>
         </div>
-        <span className="font-mono text-xl font-bold text-accent-cyan">{formatNumber(totalCount)}</span>
+        <span className="font-mono text-xl font-bold text-accent-cyan">{formatNumber(totalCount, lang)}</span>
       </div>
 
       {/* En Conversación: nota informativa (≈ total, no aporta barra visual) */}
@@ -124,7 +124,7 @@ function ConversionFunnel({ data }) {
             {statusLabel('En Conversación')} <span className="text-gray-700">({t('en_conversacion_nota')})</span>
           </span>
           <div className="flex items-center gap-2 shrink-0 ml-2">
-            <span className="font-mono text-gray-400">{formatNumber(enConvItem.count)}</span>
+            <span className="font-mono text-gray-400">{formatNumber(enConvItem.count, lang)}</span>
             <span className="text-gray-600">{enConvItem.percentOfTotal.toFixed(0)}%</span>
           </div>
         </div>
@@ -154,7 +154,7 @@ function ConversionFunnel({ data }) {
 
 // ─── Pipeline Activo (snapshot) ───────────────────────────────────────────────
 function PipelineView({ data }) {
-  const { t, distributionTooltip } = useLanguage();
+  const { t, distributionTooltip, lang } = useLanguage();
   const totalItem     = data.find(d => d.state === 'Total Leads');
   const pipelineItems = data.filter(d => d.state !== 'Total Leads');
   const totalCount    = totalItem?.count || 1;
@@ -171,7 +171,7 @@ function PipelineView({ data }) {
           <span className="text-sm font-semibold text-gray-100">{t('total_leads_label')}</span>
           <span className="text-xs text-gray-600">{t('snapshot_hoy')}</span>
         </div>
-        <span className="font-mono text-xl font-bold text-accent-cyan">{formatNumber(totalCount)}</span>
+        <span className="font-mono text-xl font-bold text-accent-cyan">{formatNumber(totalCount, lang)}</span>
       </div>
 
       <p className="text-xs text-gray-500 mb-4">
@@ -207,7 +207,7 @@ function PipelineView({ data }) {
 
 // ─── Tendencias ───────────────────────────────────────────────────────────────
 function TrendsCharts({ leadsByDay, revenueByWeek }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   return (
     <div className="space-y-8">
       <div>
@@ -245,8 +245,8 @@ function TrendsCharts({ leadsByDay, revenueByWeek }) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#21262D" />
                 <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#6E7681' }} tickFormatter={v => v.slice(5)} axisLine={{ stroke: '#30363D' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#6E7681' }} tickFormatter={v => `S/${v}`} axisLine={{ stroke: '#30363D' }} />
-                <Tooltip content={<CustomTooltip formatter={formatCurrency} />} />
+                <YAxis tick={{ fontSize: 10, fill: '#6E7681' }} tickFormatter={v => `$${v}`} axisLine={{ stroke: '#30363D' }} />
+                <Tooltip content={<CustomTooltip formatter={v => formatCurrency(v, lang)} />} />
                 <Bar dataKey="revenue" fill="url(#gradientRevenue)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -259,7 +259,7 @@ function TrendsCharts({ leadsByDay, revenueByWeek }) {
 
 // ─── Distribución ─────────────────────────────────────────────────────────────
 function DistributionCharts({ statusDistribution, districtDistribution, originDistribution }) {
-  const { t, statusLabel } = useLanguage();
+  const { t, statusLabel, lang } = useLanguage();
   const statusDistributionTranslated = statusDistribution.map(d => ({ ...d, name: statusLabel(d.name) }));
   const renderDonut = (data, title) => {
     const top5 = data.slice(0, 5);
@@ -279,7 +279,7 @@ function DistributionCharts({ statusDistribution, districtDistribution, originDi
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip formatter={formatNumber} />} />
+              <Tooltip content={<CustomTooltip formatter={v => formatNumber(v, lang)} />} />
             </PieChart>
           </ResponsiveContainer>
         </div>

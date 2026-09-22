@@ -26,14 +26,14 @@ function MiniCard({ title, value, icon: Icon, tooltip }) {
 }
 
 export default function AdvancedMetrics({ metrics }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [expanded, setExpanded] = useState(true);
   const { avgTimeToSchedule, noShowRate, closeRate, avgTicket, bestDistrict, bestDay, peakHour } = metrics;
 
   const summary = [
     closeRate > 0 && `${t('cierre_label')} ${formatPercent(closeRate)}`,
     noShowRate > 0 && `${t('no_show_label')} ${formatPercent(noShowRate)}`,
-    avgTicket > 0 && `${t('ticket_label')} ${formatCurrency(avgTicket)}`,
+    avgTicket > 0 && `${t('ticket_label')} ${formatCurrency(avgTicket, lang)}`,
   ].filter(Boolean).join(' · ');
 
   return (
@@ -76,7 +76,7 @@ export default function AdvancedMetrics({ metrics }) {
           />
           <MiniCard
             title={t('ticket_promedio')}
-            value={formatCurrency(avgTicket)}
+            value={formatCurrency(avgTicket, lang)}
             icon={Receipt}
             tooltip={t('tooltip_ticket_promedio')}
           />

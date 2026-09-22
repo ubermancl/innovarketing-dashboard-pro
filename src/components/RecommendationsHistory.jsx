@@ -18,7 +18,7 @@ function LastAnalysisBanner({ lastDate, t, lang }) {
       <CalendarClock className="w-3.5 h-3.5 text-dark-400 shrink-0" />
       <span className="text-dark-300">
         <span className="text-dark-400">{t('ultimo_analisis')}:</span>{' '}
-        <span className="font-medium text-gray-200">{formatDateTime(lastDate)}</span>
+        <span className="font-medium text-gray-200">{formatDateTime(lastDate, lang)}</span>
       </span>
       <span className="text-dark-600">·</span>
       <span className={nextIsPast ? 'text-accent-orange' : 'text-dark-300'}>
@@ -256,7 +256,7 @@ const DONE_STATES = new Set(['Implementada', 'Rechazada']);
 const TYPE_ORDER = { cuello_botella: 0, insight: 1, nota_estrategica: 2 };
 
 function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDeleteRecord, deletingRecordId }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const model = session.records[0]?.Modelo_IA || '';
@@ -287,7 +287,7 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
         <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-200">
-              {date ? formatDateTime(date) : t('sesion_sin_fecha')}
+              {date ? formatDateTime(date, lang) : t('sesion_sin_fecha')}
             </p>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
               {model && (

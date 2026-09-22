@@ -1,5 +1,6 @@
 import { parseISO, isValid, differenceInDays, differenceInHours, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks, subMonths, isWithinInterval } from 'date-fns';
 import { FUNNEL_ORDER } from './constants';
+import { formatCurrency } from './formatters';
 
 /**
  * Filtrar leads por rango de fecha
@@ -178,7 +179,7 @@ export function calculateMetrics(leads, dateFilter = 'month', customStart = null
  * Cada etapa cuenta todos los leads que llegaron a ella (o la superaron).
  * Útil para ver tasas de conversión históricas entre etapas.
  */
-export function calculateFunnel(leads) {
+export function calculateFunnel(leads, lang = 'es') {
   if (!leads || !Array.isArray(leads)) return [];
 
   // Un lead cuenta en una etapa si su estado actual indica que la alcanzó o superó
@@ -197,7 +198,13 @@ export function calculateFunnel(leads) {
     counts[stage] = leads.filter(l => (stageReached[stage] || [stage]).includes(l['Estado CRM'])).length;
   });
 
-  const cumulativeLeakedLabels = {
+  const cumulativeLeakedLabels = lang === 'en' ? {
+    'En Conversación': 'disqualified',
+    'Precalificado':   "didn't receive the link",
+    'Link Enviado':    "didn't schedule",
+    'Agendado':        "didn't attend",
+    'Asistió':         "didn't purchase",
+  } : {
     'En Conversación': 'descalificados',
     'Precalificado':   'no recibieron link',
     'Link Enviado':    'no agendaron',
@@ -233,7 +240,7 @@ export function calculateFunnel(leads) {
  * Cada etapa muestra cuántos leads están HOY en ese estado exacto.
  * Útil para saber qué acciones tomar ahora mismo.
  */
-export function calculatePipeline(leads) {
+export function calculatePipeline(leads, lang = 'es') {
   if (!leads || !Array.isArray(leads)) return [];
 
   const totalLeads = leads.length;
@@ -256,7 +263,11 @@ export function calculatePipeline(leads) {
     'Compró':          0,
   };
 
-  const leakedLabels = {
+  const leakedLabels = lang === 'en' ? {
+    'En Conversación': 'disqualified',
+    'Agendado':        "didn't attend or cancelled",
+    'Asistió':         "didn't purchase",
+  } : {
     'En Conversación': 'descalificados',
     'Agendado':        'no asistieron o cancelaron',
     'Asistió':         'no compraron',
@@ -334,7 +345,7 @@ export function calculateLeadsByDay(leads, days = 30, dateField = 'CreatedAt') {
 /**
  * Calcular métricas avanzadas
  */
-export function calculateAdvancedMetrics(leads) {
+export function calculateAdvancedMetrics(leads, lang = 'es') {
   if (!leads || !Array.isArray(leads)) {
     return {
       avgTimeToSchedule: null,
@@ -388,7 +399,9 @@ export function calculateAdvancedMetrics(leads) {
     .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
   // Mejor día
-  const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dayNames = lang === 'en'
+    ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    : ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const dayCounts = {};
   leads.forEach(lead => {
     try {
@@ -444,11 +457,12 @@ export function calculateAdvancedMetrics(leads) {
 /**
  * Generar alertas
  */
-export function generateAlerts(leads) {
+export function generateAlerts(leads, lang = 'es') {
   if (!leads || !Array.isArray(leads)) return [];
 
   const alerts = [];
   const now = new Date();
+  const en = lang === 'en';
 
   // Leads en "Requiere Humano"
   const requiresHuman = leads.filter(l => l['Estado CRM'] === 'Requiere Humano');
@@ -456,7 +470,9 @@ export function generateAlerts(leads) {
     alerts.push({
       type: 'error',
       icon: '🔴',
-      message: `${requiresHuman.length} lead${requiresHuman.length > 1 ? 's' : ''} en "Requiere Humano" - Responder urgente`,
+      message: en
+        ? `${requiresHuman.length} lead${requiresHuman.length > 1 ? 's' : ''} in "Needs Human" - Respond urgently`
+        : `${requiresHuman.length} lead${requiresHuman.length > 1 ? 's' : ''} en "Requiere Humano" - Responder urgente`,
       count: requiresHuman.length
     });
   }
@@ -480,7 +496,9 @@ export function generateAlerts(leads) {
     alerts.push({
       type: 'warning',
       icon: '🟡',
-      message: `${unconfirmedToday.length} cita${unconfirmedToday.length > 1 ? 's' : ''} hoy sin confirmar`,
+      message: en
+        ? `${unconfirmedToday.length} unconfirmed appointment${unconfirmedToday.length > 1 ? 's' : ''} today`
+        : `${unconfirmedToday.length} cita${unconfirmedToday.length > 1 ? 's' : ''} hoy sin confirmar`,
       count: unconfirmedToday.length
     });
   }
@@ -500,7 +518,9 @@ export function generateAlerts(leads) {
     alerts.push({
       type: 'warning',
       icon: '🟡',
-      message: `${linkSentNoSchedule.length} lead${linkSentNoSchedule.length > 1 ? 's' : ''} con link hace >48h sin agendar`,
+      message: en
+        ? `${linkSentNoSchedule.length} lead${linkSentNoSchedule.length > 1 ? 's' : ''} with link sent >48h ago, not scheduled`
+        : `${linkSentNoSchedule.length} lead${linkSentNoSchedule.length > 1 ? 's' : ''} con link hace >48h sin agendar`,
       count: linkSentNoSchedule.length
     });
   }
@@ -520,7 +540,9 @@ export function generateAlerts(leads) {
     alerts.push({
       type: 'warning',
       icon: '🟡',
-      message: `${staleConversation.length} lead${staleConversation.length > 1 ? 's' : ''} en conversación hace >24h sin respuesta`,
+      message: en
+        ? `${staleConversation.length} lead${staleConversation.length > 1 ? 's' : ''} in conversation >24h with no reply`
+        : `${staleConversation.length} lead${staleConversation.length > 1 ? 's' : ''} en conversación hace >24h sin respuesta`,
       count: staleConversation.length
     });
   }
@@ -532,17 +554,20 @@ export function generateAlerts(leads) {
  * Generar insights priorizados con datos reales del CRM
  * Orden: urgente > dinero en riesgo > acciones pendientes > patrones
  */
-export function generateInsights(leads, metrics) {
+export function generateInsights(leads, metrics, lang = 'es') {
   if (!leads || !Array.isArray(leads)) return [];
 
   const insights = [];
+  const en = lang === 'en';
 
   // --- PRIORIDAD 1: URGENTE (respuesta inmediata requerida) ---
   const requiresHuman = leads.filter(l => l['Estado CRM'] === 'Requiere Humano').length;
   if (requiresHuman > 0) {
     insights.push({
       icon: '🔴',
-      message: `${requiresHuman} lead${requiresHuman > 1 ? 's requieren' : ' requiere'} atención humana ahora — cada hora sin respuesta reduce ~40% la probabilidad de cierre.`,
+      message: en
+        ? `${requiresHuman} lead${requiresHuman > 1 ? 's require' : ' requires'} human attention now — every hour without a reply cuts the close probability by ~40%.`
+        : `${requiresHuman} lead${requiresHuman > 1 ? 's requieren' : ' requiere'} atención humana ahora — cada hora sin respuesta reduce ~40% la probabilidad de cierre.`,
       type: 'warning',
       priority: 1,
     });
@@ -552,11 +577,15 @@ export function generateInsights(leads, metrics) {
   const noBuy = leads.filter(l => l['Estado CRM'] === 'No Compró').length;
   if (noBuy > 0) {
     const potential = metrics?.avgTicket > 0
-      ? `= S/${Math.round(noBuy * metrics.avgTicket).toLocaleString()} en ingresos potenciales`
-      : `= ${noBuy} oportunidades sin cerrar`;
+      ? (en
+        ? `= ${formatCurrency(Math.round(noBuy * metrics.avgTicket), 'en')} in potential revenue`
+        : `= ${formatCurrency(Math.round(noBuy * metrics.avgTicket), 'es')} en ingresos potenciales`)
+      : (en ? `= ${noBuy} unclosed opportunities` : `= ${noBuy} oportunidades sin cerrar`);
     insights.push({
       icon: '💰',
-      message: `${noBuy} leads en "No Compró" ${potential}. El 20-30% puede reactivarse con un seguimiento diferente — ¿cuándo fue el último contacto?`,
+      message: en
+        ? `${noBuy} leads in "Did Not Purchase" ${potential}. 20-30% can be reactivated with a different follow-up — when was the last contact?`
+        : `${noBuy} leads en "No Compró" ${potential}. El 20-30% puede reactivarse con un seguimiento diferente — ¿cuándo fue el último contacto?`,
       type: 'action',
       priority: 2,
     });
@@ -567,7 +596,9 @@ export function generateInsights(leads, metrics) {
     const pct = (metrics.noShowRate * 100).toFixed(0);
     insights.push({
       icon: '⚠️',
-      message: `No-show en ${pct}% (umbral crítico: 20%). Un recordatorio por WhatsApp 2h antes de la cita puede reducirlo a la mitad sin costo adicional.`,
+      message: en
+        ? `No-show rate at ${pct}% (critical threshold: 20%). A WhatsApp reminder 2h before the appointment can cut it in half at no extra cost.`
+        : `No-show en ${pct}% (umbral crítico: 20%). Un recordatorio por WhatsApp 2h antes de la cita puede reducirlo a la mitad sin costo adicional.`,
       type: 'warning',
       priority: 3,
     });
@@ -578,7 +609,9 @@ export function generateInsights(leads, metrics) {
   if (linkSent > 0) {
     insights.push({
       icon: '📅',
-      message: `${linkSent} lead${linkSent !== 1 ? 's tienen' : ' tiene'} el link sin usar — un mensaje personalizado en las próximas 24h puede recuperar el 30-40% de ellos.`,
+      message: en
+        ? `${linkSent} lead${linkSent !== 1 ? 's have' : ' has'} an unused link — a personalized message in the next 24h can recover 30-40% of them.`
+        : `${linkSent} lead${linkSent !== 1 ? 's tienen' : ' tiene'} el link sin usar — un mensaje personalizado en las próximas 24h puede recuperar el 30-40% de ellos.`,
       type: 'action',
       priority: 4,
     });
@@ -588,7 +621,9 @@ export function generateInsights(leads, metrics) {
   if (precalified > 0) {
     insights.push({
       icon: '💡',
-      message: `${precalified} lead${precalified !== 1 ? 's están' : ' está'} precalificado${precalified !== 1 ? 's' : ''} y esperan el link — están listos y el momentum se enfría con cada hora.`,
+      message: en
+        ? `${precalified} lead${precalified !== 1 ? 's are' : ' is'} prequalified and waiting for the link — they're ready, and the momentum cools with every hour.`
+        : `${precalified} lead${precalified !== 1 ? 's están' : ' está'} precalificado${precalified !== 1 ? 's' : ''} y esperan el link — están listos y el momentum se enfría con cada hora.`,
       type: 'action',
       priority: 5,
     });
@@ -600,14 +635,18 @@ export function generateInsights(leads, metrics) {
     if (metrics.closeRate >= 0.5) {
       insights.push({
         icon: '🏆',
-        message: `Tasa de cierre en ${pct}% — por encima del promedio (30-40%). El cuello de botella no está en la consulta sino en traer más leads calificados a ella.`,
+        message: en
+          ? `Close rate at ${pct}% — above average (30-40%). The bottleneck isn't the consultation, it's bringing more qualified leads to it.`
+          : `Tasa de cierre en ${pct}% — por encima del promedio (30-40%). El cuello de botella no está en la consulta sino en traer más leads calificados a ella.`,
         type: 'insight',
         priority: 6,
       });
     } else if (metrics.closeRate < 0.3) {
       insights.push({
         icon: '⚡',
-        message: `Tasa de cierre en ${pct}% — por debajo del estándar (30-40%). Los leads que asisten tienen objeciones sin resolver; revisar el script de consulta puede subir esto 10-15%.`,
+        message: en
+          ? `Close rate at ${pct}% — below standard (30-40%). Leads who attend have unresolved objections; reviewing the consultation script could lift this by 10-15%.`
+          : `Tasa de cierre en ${pct}% — por debajo del estándar (30-40%). Los leads que asisten tienen objeciones sin resolver; revisar el script de consulta puede subir esto 10-15%.`,
         type: 'warning',
         priority: 6,
       });
@@ -618,7 +657,9 @@ export function generateInsights(leads, metrics) {
   if (metrics?.bestDay) {
     insights.push({
       icon: '📈',
-      message: `Los ${metrics.bestDay.toLowerCase()} recibes más leads — concentrar el presupuesto de ads ese día reduce el CPL y mejora la velocidad de primera respuesta.`,
+      message: en
+        ? `You get more leads on ${metrics.bestDay}s — concentrating ad spend that day lowers CPL and improves first-response speed.`
+        : `Los ${metrics.bestDay.toLowerCase()} recibes más leads — concentrar el presupuesto de ads ese día reduce el CPL y mejora la velocidad de primera respuesta.`,
       type: 'insight',
       priority: 7,
     });
@@ -627,7 +668,9 @@ export function generateInsights(leads, metrics) {
   if (metrics?.bestDistrict && metrics.bestDistrict !== 'Desconocido') {
     insights.push({
       icon: '🔥',
-      message: `Leads de ${metrics.bestDistrict} convierten más que cualquier otro distrito — segmentar campañas hacia esa zona mejora el ROI publicitario.`,
+      message: en
+        ? `Leads from ${metrics.bestDistrict} convert more than any other district — targeting campaigns to that zone improves ad ROI.`
+        : `Leads de ${metrics.bestDistrict} convierten más que cualquier otro distrito — segmentar campañas hacia esa zona mejora el ROI publicitario.`,
       type: 'insight',
       priority: 8,
     });

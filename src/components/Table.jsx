@@ -13,7 +13,7 @@ import { useLanguage } from '../hooks/useLanguage';
 
 // Modal de detalles del lead
 function LeadDetailModal({ lead, isOpen, onClose }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   if (!lead) return null;
 
   const sections = [
@@ -43,7 +43,7 @@ function LeadDetailModal({ lead, isOpen, onClose }) {
     {
       title: 'Citas',
       fields: [
-        { label: 'Fecha Agendamiento', value: formatDate(lead['Fecha de agendamiento']) },
+        { label: 'Fecha Agendamiento', value: formatDate(lead['Fecha de agendamiento'], lang) },
         { label: 'Hora Cita', value: lead['Hora Cita'] },
         { label: t('confirmo_cita'), value: lead['Confirmo Cita'] ? t('si') : t('no') },
       ],
@@ -51,15 +51,15 @@ function LeadDetailModal({ lead, isOpen, onClose }) {
     {
       title: 'Ventas',
       fields: [
-        { label: t('monto_venta'), value: formatCurrency(lead['Monto Venta Cerrada (PEN)']) },
+        { label: t('monto_venta'), value: formatCurrency(lead['Monto Venta Cerrada (PEN)'], lang) },
         { label: 'Plan Adquirido', value: lead['Plan Adquirido'] },
       ],
     },
     {
       title: 'Fechas',
       fields: [
-        { label: 'Creado', value: formatDateTime(lead['CreatedAt']) },
-        { label: t('ultima_modificacion'), value: formatDateTime(lead['Última Modificación']) },
+        { label: 'Creado', value: formatDateTime(lead['CreatedAt'], lang) },
+        { label: t('ultima_modificacion'), value: formatDateTime(lead['Última Modificación'], lang) },
       ],
     },
   ];
@@ -137,7 +137,7 @@ export default function Table({
       accessorKey: 'CreatedAt',
       header: t('fecha_creacion'),
       cell: ({ getValue }) => (
-        <span className="text-gray-400">{formatDate(getValue())}</span>
+        <span className="text-gray-400">{formatDate(getValue(), lang)}</span>
       ),
     },
     {
@@ -245,6 +245,7 @@ export default function Table({
                 <Select
                   value={statusFilter}
                   onChange={(e) => onStatusChange(e.target.value)}
+                  placeholder=""
                   options={[
                     { value: '', label: t('todos_estados') },
                     ...uniqueStatuses.map(s => ({ value: s, label: statusLabel(s) }))
@@ -254,6 +255,7 @@ export default function Table({
                 <Select
                   value={districtFilter}
                   onChange={(e) => onDistrictChange(e.target.value)}
+                  placeholder=""
                   options={[
                     { value: '', label: t('todos_distritos') },
                     ...uniqueDistricts.map(d => ({ value: d, label: d }))

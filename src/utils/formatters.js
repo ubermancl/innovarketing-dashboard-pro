@@ -1,18 +1,23 @@
 import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
 
-// Formateadores multi-cliente. La moneda y locale se pueden parametrizar
-// en el futuro desde businessContext — por ahora usan es-419 (español latino).
+// Formateadores multi-cliente. La moneda se puede parametrizar en el futuro
+// desde businessContext — por ahora siempre USD. El idioma (`lang`, 'es'|'en')
+// se pasa explícito porque estas son funciones planas, no hooks — no pueden
+// leer el LanguageProvider directo. Default 'es' por compatibilidad hacia atrás.
 
-export function formatNumber(value) {
+const dateLocale = (lang) => (lang === 'en' ? enUS : es);
+const numberLocale = (lang) => (lang === 'en' ? 'en-US' : 'es-419');
+
+export function formatNumber(value, lang = 'es') {
   if (value === null || value === undefined) return '-';
-  return new Intl.NumberFormat('es-419').format(value);
+  return new Intl.NumberFormat(numberLocale(lang)).format(value);
 }
 
-export function formatCurrency(value) {
+export function formatCurrency(value, lang = 'es') {
   if (value === null || value === undefined) return '-';
   // USD por defecto — la moneda real depende del contexto del negocio
-  return new Intl.NumberFormat('es-419', {
+  return new Intl.NumberFormat(numberLocale(lang), {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
@@ -33,12 +38,12 @@ export function formatPercent(value, decimals = 1) {
  * Formatear fecha completa
  * "19 Feb 2026, 3:45pm"
  */
-export function formatDateTime(dateString) {
+export function formatDateTime(dateString, lang = 'es') {
   if (!dateString) return '-';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     if (!isValid(date)) return '-';
-    return format(date, "d MMM yyyy, h:mma", { locale: es }).toLowerCase();
+    return format(date, "d MMM yyyy, h:mma", { locale: dateLocale(lang) }).toLowerCase();
   } catch {
     return '-';
   }
@@ -48,12 +53,12 @@ export function formatDateTime(dateString) {
  * Formatear fecha corta
  * "19 Feb 2026"
  */
-export function formatDate(dateString) {
+export function formatDate(dateString, lang = 'es') {
   if (!dateString) return '-';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     if (!isValid(date)) return '-';
-    return format(date, "d MMM yyyy", { locale: es });
+    return format(date, "d MMM yyyy", { locale: dateLocale(lang) });
   } catch {
     return '-';
   }
@@ -63,7 +68,7 @@ export function formatDate(dateString) {
  * Formatear hora
  * "3:45pm"
  */
-export function formatTime(timeString) {
+export function formatTime(timeString, lang = 'es') {
   if (!timeString) return '-';
   try {
     // Si es solo hora (HH:mm), crear fecha con esa hora
@@ -71,11 +76,11 @@ export function formatTime(timeString) {
       const [hours, minutes] = timeString.split(':');
       const date = new Date();
       date.setHours(parseInt(hours), parseInt(minutes));
-      return format(date, "h:mma", { locale: es }).toLowerCase();
+      return format(date, "h:mma", { locale: dateLocale(lang) }).toLowerCase();
     }
     const date = typeof timeString === 'string' ? parseISO(timeString) : timeString;
     if (!isValid(date)) return timeString;
-    return format(date, "h:mma", { locale: es }).toLowerCase();
+    return format(date, "h:mma", { locale: dateLocale(lang) }).toLowerCase();
   } catch {
     return timeString || '-';
   }
@@ -85,12 +90,12 @@ export function formatTime(timeString) {
  * Formatear fecha relativa
  * "hace 2 horas", "ayer"
  */
-export function formatRelativeTime(dateString) {
+export function formatRelativeTime(dateString, lang = 'es') {
   if (!dateString) return '-';
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     if (!isValid(date)) return '-';
-    return formatDistanceToNow(date, { addSuffix: true, locale: es });
+    return formatDistanceToNow(date, { addSuffix: true, locale: dateLocale(lang) });
   } catch {
     return '-';
   }
@@ -156,11 +161,12 @@ export function formatChange(value) {
 }
 
 /**
- * Obtener día de la semana en español
+ * Obtener día de la semana
  */
-export function getDayName(date) {
-  const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  return days[date.getDay()];
+export function getDayName(date, lang = 'es') {
+  const daysEs = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return (lang === 'en' ? daysEn : daysEs)[date.getDay()];
 }
 
 /**

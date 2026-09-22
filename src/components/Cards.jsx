@@ -6,12 +6,12 @@ import { formatNumber, formatCurrency, formatPercent, formatChange } from '../ut
 import { useLanguage } from '../hooks/useLanguage';
 
 function MetricCard({ title, value, change, icon: Icon, format = 'number', danger = false, subtitle = null, notConfigured = false }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const formatted = notConfigured
     ? '—'
-    : format === 'currency' ? formatCurrency(value)
+    : format === 'currency' ? formatCurrency(value, lang)
     : format === 'percent' ? formatPercent(value)
-    : formatNumber(value);
+    : formatNumber(value, lang);
 
   const changeData = formatChange(change);
 
