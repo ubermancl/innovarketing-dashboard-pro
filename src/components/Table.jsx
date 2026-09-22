@@ -176,14 +176,16 @@ export default function Table({
 
   // Exportar a CSV
   const exportToCSV = () => {
-    const headers = ['Nombre', 'Teléfono', 'Email', 'Estado CRM', 'Distrito', 'Fecha Creación', 'Monto Venta'];
+    const headers = lang === 'en'
+      ? ['Name', 'Phone', 'Email', 'CRM Status', 'District', 'Created Date', 'Sale Amount']
+      : ['Nombre', 'Teléfono', 'Email', 'Estado CRM', 'Distrito', 'Fecha Creación', 'Monto Venta'];
     const rows = leads.map(lead => [
       lead.Nombre || '',
       lead.Phone || '',
       lead.Email || '',
-      lead['Estado CRM'] || '',
+      lead['Estado CRM'] ? statusLabel(lead['Estado CRM']) : '',
       lead['Distrito Usado Para Calificar'] || lead['Distrito Residencia'] || '',
-      lead.CreatedAt || '',
+      lead.CreatedAt ? formatDate(lead.CreatedAt, lang) : '',
       lead['Monto Venta Cerrada (PEN)'] || '',
     ]);
 

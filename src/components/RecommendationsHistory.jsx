@@ -31,27 +31,35 @@ function LastAnalysisBanner({ lastDate, t, lang }) {
   );
 }
 
+// `value` siempre en español porque es el dato real guardado en NocoDB
+// (rec.Estado). El label de display sí se traduce.
 const ESTADOS = [
-  { value: 'Pendiente',    label: 'Pendiente',    color: 'text-warning bg-warning/10 border-warning/30' },
-  { value: 'Aceptada',     label: 'Aceptada',     color: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/30' },
-  { value: 'En Progreso',  label: 'En Progreso',  color: 'text-accent-orange bg-accent-orange/10 border-accent-orange/30' },
-  { value: 'Implementada', label: 'Implementada', color: 'text-accent-green bg-accent-green/10 border-accent-green/30' },
-  { value: 'Rechazada',    label: 'Rechazada',    color: 'text-dark-400 bg-dark-700 border-dark-600' },
+  { value: 'Pendiente',    color: 'text-warning bg-warning/10 border-warning/30' },
+  { value: 'Aceptada',     color: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/30' },
+  { value: 'En Progreso',  color: 'text-accent-orange bg-accent-orange/10 border-accent-orange/30' },
+  { value: 'Implementada', color: 'text-accent-green bg-accent-green/10 border-accent-green/30' },
+  { value: 'Rechazada',    color: 'text-dark-400 bg-dark-700 border-dark-600' },
 ];
 
+const ESTADO_LABELS = {
+  es: { Pendiente: 'Pendiente', Aceptada: 'Aceptada', 'En Progreso': 'En Progreso', Implementada: 'Implementada', Rechazada: 'Rechazada' },
+  en: { Pendiente: 'Pending', Aceptada: 'Accepted', 'En Progreso': 'In Progress', Implementada: 'Implemented', Rechazada: 'Rejected' },
+};
+
 const TIPO_ICONS = {
-  cuello_botella:  { icon: AlertTriangle, label: 'Cuello de botella', color: 'text-accent-orange' },
-  insight:         { icon: Zap,           label: 'Acción',            color: 'text-accent-cyan'   },
-  nota_estrategica:{ icon: StickyNote,    label: 'Nota estratégica',  color: 'text-dark-400'      },
+  cuello_botella:  { icon: AlertTriangle, color: 'text-accent-orange' },
+  insight:         { icon: Zap,           color: 'text-accent-cyan'   },
+  nota_estrategica:{ icon: StickyNote,    color: 'text-dark-400'      },
 };
 
 const COUNTDOWN_SECONDS = 5;
 
 function StatusBadge({ estado }) {
+  const { lang } = useLanguage();
   const e = ESTADOS.find(s => s.value === estado) || ESTADOS[0];
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${e.color}`}>
-      {e.label}
+      {ESTADO_LABELS[lang]?.[e.value] || e.value}
     </span>
   );
 }
@@ -144,7 +152,7 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label, size = 'session' 
 }
 
 function StatusSelector({ id, current, onUpdate, isUpdating }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
@@ -179,7 +187,7 @@ function StatusSelector({ id, current, onUpdate, isUpdating }) {
                 onClick={() => handleSelect(e.value)}
                 className="w-full text-left px-3 py-2 text-xs hover:bg-dark-700 transition-colors first:rounded-t-card last:rounded-b-card"
               >
-                <span className={e.color.split(' ')[0]}>{e.label}</span>
+                <span className={e.color.split(' ')[0]}>{ESTADO_LABELS[lang]?.[e.value] || e.value}</span>
               </button>
             ))}
           </div>

@@ -18,8 +18,9 @@ function repairJSON(s) {
 }
 
 // Extrae JSON aunque el modelo añada texto extra, markdown o tenga errores menores
-function extractJSON(text) {
-  if (!text) throw new Error('Respuesta vacía del modelo. Prueba con Claude Haiku o GPT-4o Mini.');
+function extractJSON(text, lang = 'es') {
+  const en = lang === 'en';
+  if (!text) throw new Error(en ? 'Empty response from the model. Try Claude Haiku or GPT-4o Mini.' : 'Respuesta vacía del modelo. Prueba con Claude Haiku o GPT-4o Mini.');
   const tryParse = (s) => { try { return JSON.parse(s); } catch { return null; } };
   // 1. JSON puro
   let r = tryParse(text);
@@ -39,7 +40,7 @@ function extractJSON(text) {
     r = tryParse(obj[0]) || tryParse(repairJSON(obj[0]));
     if (r) return r;
   }
-  throw new Error('El modelo no generó JSON válido. Modelos recomendados: Claude Haiku, GPT-4o Mini, Grok.');
+  throw new Error(en ? 'The model did not generate valid JSON. Recommended models: Claude Haiku, GPT-4o Mini, Grok.' : 'El modelo no generó JSON válido. Modelos recomendados: Claude Haiku, GPT-4o Mini, Grok.');
 }
 
 // Modelos verificados como compatibles con el diagnóstico
@@ -54,34 +55,47 @@ const VERIFIED_IDS = new Set([
 ]);
 
 const DATE_FILTER_LABELS = {
-  today:  'Hoy',
-  week:   'Esta semana',
-  last7:  'Últimos 7 días',
-  month:  'Este mes',
-  last30: 'Últimos 30 días',
-  last90: 'Últimos 90 días',
-  all:    'Registro histórico completo',
-  custom: 'Período personalizado',
+  es: {
+    today:  'Hoy',
+    week:   'Esta semana',
+    last7:  'Últimos 7 días',
+    month:  'Este mes',
+    last30: 'Últimos 30 días',
+    last90: 'Últimos 90 días',
+    all:    'Registro histórico completo',
+    custom: 'Período personalizado',
+  },
+  en: {
+    today:  'Today',
+    week:   'This week',
+    last7:  'Last 7 days',
+    month:  'This month',
+    last30: 'Last 30 days',
+    last90: 'Last 90 days',
+    all:    'Full historical record',
+    custom: 'Custom period',
+  },
 };
 
 function CostPanel({ costData, leadsCount, conversionCount }) {
+  const { t } = useLanguage();
   if (!costData) return null;
   const monthly = projectMonthlyCost(costData.totalCost);
   const perLead = costPerLead(costData.totalCost, leadsCount);
   const perConv = costPerConversion(costData.totalCost, conversionCount);
 
   const rows = [
-    { label: 'Tokens usados', value: `${costData.totalTokens.toLocaleString()} (${costData.inputTokens.toLocaleString()} in / ${costData.outputTokens.toLocaleString()} out)` },
-    { label: 'Costo de este análisis', value: formatCostUSD(costData.totalCost) },
-    { label: 'Proyección mensual (1/día)', value: formatCostUSD(monthly) },
-    { label: 'Costo por lead analizado', value: formatCostUSD(perLead) },
-    { label: 'Costo por conversión', value: perConv ? formatCostUSD(perConv) : '—' },
+    { label: t('tokens_usados'), value: `${costData.totalTokens.toLocaleString()} (${costData.inputTokens.toLocaleString()} in / ${costData.outputTokens.toLocaleString()} out)` },
+    { label: t('costo_analisis'), value: formatCostUSD(costData.totalCost) },
+    { label: t('proyeccion_mensual'), value: formatCostUSD(monthly) },
+    { label: t('costo_por_lead'), value: formatCostUSD(perLead) },
+    { label: t('costo_por_conversion'), value: perConv ? formatCostUSD(perConv) : '—' },
   ];
 
   return (
     <div className="mt-4 p-4 bg-dark-700/50 rounded-card border border-dark-600">
       <p className="text-xs text-dark-400 font-medium uppercase tracking-wide mb-3 flex items-center gap-1.5">
-        <DollarSign className="w-3 h-3" /> ROI del análisis IA
+        <DollarSign className="w-3 h-3" /> {t('roi_analisis')}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {rows.map(r => (
@@ -96,6 +110,7 @@ function CostPanel({ costData, leadsCount, conversionCount }) {
 }
 
 function InsightCard({ insight, index }) {
+  const { t } = useLanguage();
   return (
     <div className="p-4 bg-dark-700/50 rounded-card border border-dark-600 hover:border-accent-orange/30 transition-colors">
       <div className="flex items-start gap-3 mb-3">
@@ -103,7 +118,7 @@ function InsightCard({ insight, index }) {
         <h4 className="text-sm font-semibold text-gray-100 leading-snug">{insight.title}</h4>
       </div>
       <p className="text-xs text-dark-400 mb-2 leading-relaxed">
-        <span className="text-accent-orange font-medium">Dato: </span>{insight.data}
+        <span className="text-accent-orange font-medium">{t('dato_label')}: </span>{insight.data}
       </p>
       <div className="flex items-start gap-2 p-2.5 bg-accent-orange/8 rounded-button border border-accent-orange/20">
         <Zap className="w-3 h-3 text-accent-orange shrink-0 mt-0.5" />
@@ -114,6 +129,7 @@ function InsightCard({ insight, index }) {
 }
 
 function DiagnosisInfo() {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   return (
     <div className="relative inline-flex">
@@ -122,16 +138,16 @@ function DiagnosisInfo() {
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(v => !v)}
         className="text-dark-500 hover:text-dark-300 transition-colors"
-        aria-label="¿Qué analiza?"
+        aria-label={t('que_analiza_aria')}
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {show && (
         <div className="absolute left-5 top-0 z-30 w-72 p-3 bg-dark-800 border border-dark-600 rounded-card shadow-xl text-xs text-gray-300 leading-relaxed">
-          <p className="font-semibold text-gray-100 mb-1.5">¿Qué analiza el Diagnóstico IA?</p>
-          <p className="mb-1.5">Toma las métricas del período seleccionado en el filtro de fecha (leads, conversión, embudo, alertas) y aplica la <span className="text-accent-orange font-medium">Teoría de Restricciones (TOC)</span> para identificar el cuello de botella principal que limita tus resultados.</p>
-          <p className="mb-1.5">Genera <span className="text-accent-cyan font-medium">3 acciones priorizadas</span> con evidencia concreta y una nota estratégica de contexto.</p>
-          <p className="text-dark-400">Si NocoDB está configurado, incluye el historial de análisis anteriores para evitar repetir recomendaciones ya implementadas.</p>
+          <p className="font-semibold text-gray-100 mb-1.5">{t('que_analiza_1')}</p>
+          <p className="mb-1.5">{t('que_analiza_2')}</p>
+          <p className="mb-1.5">{t('que_analiza_3')}</p>
+          <p className="text-dark-400">{t('que_analiza_4')}</p>
         </div>
       )}
     </div>
@@ -144,7 +160,7 @@ export default function AIDiagnosis({
   dateFilter,
 }) {
   const { businessContext } = useBusinessContext();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [result, setResult] = useState(null);
   const [costData, setCostData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -168,6 +184,7 @@ export default function AIDiagnosis({
       const { systemPrompt, userPrompt } = buildDiagnosisPrompt({
         metrics, businessContext, funnelData, alerts, advancedMetrics,
         historyForPrompt: recsConfigured ? historyForPrompt : null,
+        lang,
       });
 
       const response = await callOpenRouter({
@@ -177,7 +194,7 @@ export default function AIDiagnosis({
         openrouterKey: businessContext.openrouterKey,
       });
 
-      const parsed = extractJSON(response.content);
+      const parsed = extractJSON(response.content, lang);
       const cd = estimateCost(response.usage, selectedModel);
       setResult(parsed);
       setCostData(cd);
@@ -239,16 +256,16 @@ export default function AIDiagnosis({
               <DiagnosisInfo />
             </div>
             <p className="text-xs text-dark-400">
-              {modelName} · {DATE_FILTER_LABELS[dateFilter] || 'período seleccionado'}
-              {recsConfigured && <span className="text-accent-green"> · historial activo</span>}
+              {modelName} · {DATE_FILTER_LABELS[lang]?.[dateFilter] || t('periodo_seleccionado')}
+              {recsConfigured && <span className="text-accent-green"> · {t('historial_activo')}</span>}
             </p>
           </div>
         </div>
 
         <Button onClick={runDiagnosis} loading={isLoading} disabled={isLoading || isSaving} size="sm">
           {isLoading
-            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Analizando...</>
-            : <><Sparkles className="w-3.5 h-3.5" /> Analizar ahora</>
+            ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> {t('analizando')}</>
+            : <><Sparkles className="w-3.5 h-3.5" /> {t('analizar_ahora')}</>
           }
         </Button>
       </div>
@@ -263,9 +280,9 @@ export default function AIDiagnosis({
       {!result && !isLoading && !error && (
         <div className="p-8 text-center text-dark-500">
           <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-40" />
-          <p className="text-sm">Haz clic en "Analizar ahora" para generar insights basados en tus datos.</p>
+          <p className="text-sm">{t('click_analizar')}</p>
           {recsConfigured && (
-            <p className="text-xs mt-2 opacity-60">Los resultados se guardarán automáticamente en NocoDB.</p>
+            <p className="text-xs mt-2 opacity-60">{t('guardado_automatico')}</p>
           )}
         </div>
       )}
@@ -274,7 +291,7 @@ export default function AIDiagnosis({
         <div className="p-8 text-center">
           <div className="inline-flex items-center gap-3 text-accent-orange">
             <RefreshCw className="w-5 h-5 animate-spin" />
-            <span className="text-sm">Consultando historial y generando diagnóstico...</span>
+            <span className="text-sm">{t('consultando_historial')}</span>
           </div>
         </div>
       )}
@@ -284,16 +301,16 @@ export default function AIDiagnosis({
           {/* Cuello de botella — TOC */}
           <div className="p-4 bg-accent-orange/8 border border-accent-orange/30 rounded-card">
             <p className="text-xs text-accent-orange font-medium uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <TrendingUp className="w-3 h-3" /> Cuello de botella (TOC)
+              <TrendingUp className="w-3 h-3" /> {t('cuello_botella_toc')}
             </p>
             <h4 className="text-base font-bold text-gray-100 mb-1">{result.bottleneck?.title}</h4>
             <p className="text-sm text-gray-300 leading-relaxed mb-2">{result.bottleneck?.description}</p>
-            <p className="text-xs text-dark-400 italic">Evidencia: {result.bottleneck?.evidence}</p>
+            <p className="text-xs text-dark-400 italic">{t('evidencia')}: {result.bottleneck?.evidence}</p>
           </div>
 
           {/* 3 insights */}
           <div>
-            <p className="text-xs text-dark-400 uppercase tracking-wide mb-3">3 Acciones Prioritarias</p>
+            <p className="text-xs text-dark-400 uppercase tracking-wide mb-3">{t('tres_acciones')}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {(result.insights || []).slice(0, 3).map((insight, i) => (
                 <InsightCard key={i} insight={insight} index={i} />
@@ -303,7 +320,7 @@ export default function AIDiagnosis({
 
           {result.strategic_note && (
             <div className="p-3 bg-dark-700/30 border border-dark-600 rounded-card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Nota estratégica</p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">{t('nota_estrategica')}</p>
               <p className="text-sm text-gray-300">{result.strategic_note}</p>
             </div>
           )}

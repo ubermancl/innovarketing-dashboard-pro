@@ -27,10 +27,13 @@ export async function callOpenRouter({ model, systemPrompt, userPrompt, openrout
 
 // Construir el prompt de diagnóstico con métricas + contexto + historial previo.
 // El historial evita que la IA repita recomendaciones ya implementadas o rechazadas.
-export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, alerts, advancedMetrics, historyForPrompt }) {
+// `lang` ('es'|'en') controla el idioma en que responde el modelo — el dashboard
+// se comparte con clientes internacionales, así que el resultado debe seguir el toggle.
+export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, alerts, advancedMetrics, historyForPrompt, lang = 'es' }) {
   const ctx = businessContext || {};
   const m = metrics || {};
   const adv = advancedMetrics || {};
+  const en = lang === 'en';
 
   const funnelText = (funnelData || [])
     .map(s => `  ${s.state}: ${s.count} leads (${s.percentOfTotal?.toFixed(1)}%)`)
@@ -38,18 +41,88 @@ export function buildDiagnosisPrompt({ metrics, businessContext, funnelData, ale
 
   const alertsText = (alerts || []).length > 0
     ? alerts.map(a => `  - ${a.message}`).join('\n')
-    : '  Sin alertas activas';
+    : (en ? '  No active alerts' : '  Sin alertas activas');
 
   const historySection = historyForPrompt
-    ? `\n## Historial de recomendaciones anteriores\n${historyForPrompt}\n\nInstrucciones sobre el historial:\n- NO repitas recomendaciones en estado IMPLEMENTADA o RECHAZADA\n- Para las EN PROGRESO: da seguimiento, variaciones o métricas de avance\n- Para las PENDIENTES con más de 7 días: re-prioriza o reemplaza con justificación\n- Enfoca los nuevos insights en áreas no abordadas aún\n`
+    ? (en
+      ? `\n## Previous recommendations history\n${historyForPrompt}\n\nInstructions about the history:\n- Do NOT repeat recommendations marked IMPLEMENTED or REJECTED\n- For IN PROGRESS: give follow-up, variations, or progress metrics\n- For PENDING older than 7 days: re-prioritize or replace with justification\n- Focus new insights on areas not yet addressed\n`
+      : `\n## Historial de recomendaciones anteriores\n${historyForPrompt}\n\nInstrucciones sobre el historial:\n- NO repitas recomendaciones en estado IMPLEMENTADA o RECHAZADA\n- Para las EN PROGRESO: da seguimiento, variaciones o métricas de avance\n- Para las PENDIENTES con más de 7 días: re-prioriza o reemplaza con justificación\n- Enfoca los nuevos insights en áreas no abordadas aún\n`)
     : '';
 
-  const systemPrompt = `Eres un consultor experto en performance de ventas y marketing digital B2B/B2C.
+  const systemPrompt = en
+    ? `You are an expert consultant in B2B/B2C sales and digital marketing performance.
+You apply the Theory of Constraints (TOC): identify the ONE real bottleneck before recommending scaling.
+Your analysis is honest, actionable, and data-driven. Never assume without evidence.
+Respond ALWAYS in valid JSON, in English, with the exact structure requested.`
+    : `Eres un consultor experto en performance de ventas y marketing digital B2B/B2C.
 Aplicas la Teoría de Restricciones (TOC): identifica el ÚNICO cuello de botella real antes de recomendar escalar.
 Tu análisis es honesto, accionable y basado en datos. No hagas suposiciones sin evidencia.
 Responde SIEMPRE en JSON válido con la estructura exacta que se te indica.`;
 
-  const userPrompt = `## Contexto del negocio
+  const userPrompt = en ? `## Business context
+- Name: ${ctx.businessName || 'Not configured'}
+- Country/City: ${ctx.country || '?'}/${ctx.city || '?'}
+- Vertical: ${ctx.vertical || 'Not specified'}
+- Model: ${ctx.businessModel || 'Not specified'}
+- Average ticket: $${ctx.avgTicket || 0} USD
+- Monthly ad spend: $${ctx.monthlyAdSpend || 0} USD
+- Ad platforms: ${(ctx.adPlatforms || []).join(', ') || 'none'}
+- Monthly goal: $${ctx.monthlyGoal || 0} USD
+- Main channel: ${ctx.mainChannel || 'not specified'}
+- Team size: ${ctx.teamSize || '?'} people
+- Recurring service: ${ctx.recurring ? `Yes, average LTV ${ctx.avgClientLifetime} months` : 'No'}
+
+## Current metrics
+- Total leads in CRM: ${m.totalLeads || 0}
+- Leads current period: ${m.newLeads || 0}
+- Active conversations: ${m.inConversacion || 0}
+- Scheduled appointments: ${m.scheduled || 0}
+- Conversion rate: ${((m.conversionRate || 0) * 100).toFixed(1)}%
+- Revenue period: $${m.revenue || 0}
+- Require manual attention: ${m.requiresAttention || 0}
+- Leads with no response +24h: ${m.leadsWithoutResponse24h || 0}
+- No-show rate: ${((adv.noShowRate || 0) * 100).toFixed(1)}%
+- Close rate (attended→purchased): ${((adv.closeRate || 0) * 100).toFixed(1)}%
+- Real average ticket: $${(adv.avgTicket || 0).toFixed(0)}
+- Estimated CAC: $${m.cac || 'no ad spend data'}
+- Month forecast: $${m.forecast || 0}
+- Best lead day: ${adv.bestDay || 'no data'}
+- Peak hour: ${adv.peakHour || 'no data'}
+
+## Current funnel
+${funnelText}
+
+## Active alerts
+${alertsText}
+${historySection}
+---
+Analyze this data applying TOC. Identify the bottleneck that most limits growth.
+Respond exactly in this JSON (no markdown, pure JSON only), with all text values in English:
+{
+  "bottleneck": {
+    "title": "bottleneck title, max 8 words",
+    "description": "explanation of why this is THE limiting factor, with evidence from the data",
+    "evidence": "specific metric that proves it"
+  },
+  "insights": [
+    {
+      "title": "actionable title, max 8 words",
+      "data": "specific data point supporting the insight",
+      "action": "concrete action that can be taken this week"
+    },
+    {
+      "title": "...",
+      "data": "...",
+      "action": "..."
+    },
+    {
+      "title": "...",
+      "data": "...",
+      "action": "..."
+    }
+  ],
+  "strategic_note": "a strategic observation that doesn't fit the 3 insights, or null if not applicable"
+}` : `## Contexto del negocio
 - Nombre: ${ctx.businessName || 'No configurado'}
 - País/Ciudad: ${ctx.country || '?'}/${ctx.city || '?'}
 - Vertical: ${ctx.vertical || 'No especificado'}

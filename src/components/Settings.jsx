@@ -5,8 +5,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import { Button, Input, Select } from './ui';
 
 const TABS = [
-  { id: 'negocio', label: 'Contexto del Negocio', icon: Building2 },
-  { id: 'ia', label: 'IA & OpenRouter', icon: Bot },
+  { id: 'negocio', labelKey: 'tab_contexto_negocio', icon: Building2 },
+  { id: 'ia', labelKey: 'tab_ia_openrouter', icon: Bot },
   { id: 'idioma', labelKey: 'idioma', icon: Globe },
 ];
 
@@ -33,15 +33,26 @@ function IdiomaTab() {
   );
 }
 
-const VERTICALS = [
-  { value: 'clinica', label: 'Clínica / Salud' },
-  { value: 'inmobiliaria', label: 'Inmobiliaria' },
-  { value: 'academia', label: 'Academia / Educación' },
-  { value: 'retail', label: 'Retail / Comercio' },
-  { value: 'agencia', label: 'Agencia / Servicios' },
-  { value: 'ecommerce', label: 'E-commerce' },
-  { value: 'otro', label: 'Otro' },
-];
+const VERTICALS = {
+  es: [
+    { value: 'clinica', label: 'Clínica / Salud' },
+    { value: 'inmobiliaria', label: 'Inmobiliaria' },
+    { value: 'academia', label: 'Academia / Educación' },
+    { value: 'retail', label: 'Retail / Comercio' },
+    { value: 'agencia', label: 'Agencia / Servicios' },
+    { value: 'ecommerce', label: 'E-commerce' },
+    { value: 'otro', label: 'Otro' },
+  ],
+  en: [
+    { value: 'clinica', label: 'Clinic / Healthcare' },
+    { value: 'inmobiliaria', label: 'Real Estate' },
+    { value: 'academia', label: 'Academy / Education' },
+    { value: 'retail', label: 'Retail / Commerce' },
+    { value: 'agencia', label: 'Agency / Services' },
+    { value: 'ecommerce', label: 'E-commerce' },
+    { value: 'otro', label: 'Other' },
+  ],
+};
 
 const AD_PLATFORMS = ['Meta', 'Google', 'TikTok', 'LinkedIn', 'YouTube'];
 
@@ -104,10 +115,11 @@ function CheckboxGroup({ label, options, selected, onChange }) {
 }
 
 function AvatarColorPicker({ color, onChange, logoUrl }) {
+  const { t } = useLanguage();
   if (logoUrl) return null;
   return (
     <div>
-      <label className="block text-sm text-gray-400 mb-1.5">Color del avatar (cuando no hay imagen)</label>
+      <label className="block text-sm text-gray-400 mb-1.5">{t('color_avatar')}</label>
       <div className="flex items-center gap-2 flex-wrap">
         {AVATAR_COLORS.map(c => (
           <button
@@ -125,7 +137,7 @@ function AvatarColorPicker({ color, onChange, logoUrl }) {
           type="color"
           value={color || '#F97316'}
           onChange={e => onChange(e.target.value)}
-          title="Color personalizado"
+          title={t('color_personalizado')}
           className="w-7 h-7 rounded-lg cursor-pointer border border-dark-600 bg-dark-700 p-0.5"
         />
       </div>
@@ -134,6 +146,7 @@ function AvatarColorPicker({ color, onChange, logoUrl }) {
 }
 
 function LogoUpload({ logoUrl, logoColor, onChange }) {
+  const { t } = useLanguage();
   const inputRef = useRef(null);
   const [status, setStatus] = useState(null);
   const [info, setInfo] = useState('');
@@ -144,7 +157,7 @@ function LogoUpload({ logoUrl, logoColor, onChange }) {
     const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
     if (file.size > 5 * 1024 * 1024) {
       setStatus('error');
-      setInfo(`Imagen demasiado grande (${fileSizeMB} MB). Máximo 5 MB.`);
+      setInfo(`${t('imagen_muy_grande')} (${fileSizeMB} MB). ${t('maximo_5mb')}`);
       e.target.value = '';
       return;
     }
@@ -155,7 +168,7 @@ function LogoUpload({ logoUrl, logoColor, onChange }) {
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
       setStatus('error');
-      setInfo('No se pudo leer la imagen. Prueba con otro archivo.');
+      setInfo(t('imagen_no_leida'));
       e.target.value = '';
     };
     img.onload = () => {
@@ -179,7 +192,7 @@ function LogoUpload({ logoUrl, logoColor, onChange }) {
 
   return (
     <div>
-      <label className="block text-sm text-gray-400 mb-1.5">Logo del sidebar</label>
+      <label className="block text-sm text-gray-400 mb-1.5">{t('logo_sidebar')}</label>
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-dark-600"
           style={{ backgroundColor: logoUrl ? undefined : (logoColor || '#F97316') }}>
@@ -191,12 +204,12 @@ function LogoUpload({ logoUrl, logoColor, onChange }) {
         <div className="flex gap-2">
           <button type="button" onClick={() => inputRef.current?.click()} disabled={status === 'loading'}
             className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors disabled:opacity-50">
-            {status === 'loading' ? 'Procesando...' : logoUrl ? 'Cambiar imagen' : 'Subir imagen'}
+            {status === 'loading' ? t('procesando') : logoUrl ? t('cambiar_imagen') : t('subir_imagen')}
           </button>
           {logoUrl && (
             <button type="button" onClick={() => { onChange(''); setStatus(null); setInfo(''); }}
               className="px-3 py-1.5 text-xs bg-dark-700 border border-dark-600 rounded-button text-error/70 hover:text-error hover:border-error/30 transition-colors">
-              Quitar
+              {t('quitar')}
             </button>
           )}
         </div>
@@ -204,67 +217,68 @@ function LogoUpload({ logoUrl, logoColor, onChange }) {
       </div>
       {status === 'ok' && <p className="text-xs text-accent-green mt-1.5 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {info}</p>}
       {status === 'error' && <p className="text-xs text-error mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {info}</p>}
-      {!status && <p className="text-xs text-dark-500 mt-1.5">PNG, JPG o WebP · máx 5 MB · se recorta al centro automáticamente</p>}
+      {!status && <p className="text-xs text-dark-500 mt-1.5">{t('formatos_imagen')}</p>}
     </div>
   );
 }
 
 function NegocioTab({ local, setLocal }) {
+  const { t, lang } = useLanguage();
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input label="Nombre del negocio" value={local.businessName}
-          onChange={e => setLocal(p => ({ ...p, businessName: e.target.value }))} placeholder="Ej: Clínica NutraSalud" />
-        <Select label="Vertical del negocio" value={local.vertical}
+        <Input label={t('nombre_negocio')} value={local.businessName}
+          onChange={e => setLocal(p => ({ ...p, businessName: e.target.value }))} placeholder={t('nombre_negocio_placeholder')} />
+        <Select label={t('vertical_negocio')} value={local.vertical}
           onChange={e => setLocal(p => ({ ...p, vertical: e.target.value }))}
-          options={[{ value: '', label: 'Selecciona...' }, ...VERTICALS]} />
-        <Input label="Iniciales del logo (2 letras)" value={local.logoInitials || ''}
+          options={[{ value: '', label: t('selecciona') }, ...VERTICALS[lang]]} />
+        <Input label={t('iniciales_logo')} value={local.logoInitials || ''}
           onChange={e => setLocal(p => ({ ...p, logoInitials: e.target.value.slice(0, 2).toUpperCase() }))}
-          placeholder="Ej: NC (auto si vacío)" />
+          placeholder={t('codigo_negocio_placeholder')} />
         <LogoUpload logoUrl={local.logoUrl || ''} logoColor={local.logoColor || '#F97316'}
           onChange={url => setLocal(p => ({ ...p, logoUrl: url }))} />
         <AvatarColorPicker color={local.logoColor || '#F97316'}
           onChange={color => setLocal(p => ({ ...p, logoColor: color }))} logoUrl={local.logoUrl || ''} />
-        <Input label="País" value={local.country}
+        <Input label={t('pais_input')} value={local.country}
           onChange={e => setLocal(p => ({ ...p, country: e.target.value }))} placeholder="Ej: Chile" />
-        <Input label="Ciudad principal" value={local.city}
+        <Input label={t('ciudad_principal')} value={local.city}
           onChange={e => setLocal(p => ({ ...p, city: e.target.value }))} placeholder="Ej: Santiago" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Select label="Modelo de negocio" value={local.businessModel}
+        <Select label={t('modelo_negocio')} value={local.businessModel}
           onChange={e => setLocal(p => ({ ...p, businessModel: e.target.value }))}
-          options={[{ value: '', label: 'Selecciona...' }, { value: 'B2B', label: 'B2B — Vende a empresas' },
-            { value: 'B2C', label: 'B2C — Vende a personas' }, { value: 'Mixto', label: 'Mixto' }]} />
-        <Select label="Canal principal de captación" value={local.mainChannel}
+          options={[{ value: '', label: t('selecciona') }, { value: 'B2B', label: t('b2b_desc') },
+            { value: 'B2C', label: t('b2c_desc') }, { value: 'Mixto', label: t('mixto') }]} />
+        <Select label={t('canal_principal')} value={local.mainChannel}
           onChange={e => setLocal(p => ({ ...p, mainChannel: e.target.value }))}
-          options={[{ value: '', label: 'Selecciona...' }, { value: 'organico', label: 'Orgánico (SEO, Redes)' },
-            { value: 'pagado', label: 'Pagado (Ads)' }, { value: 'referidos', label: 'Referidos' },
-            { value: 'mixto', label: 'Mixto' }]} />
+          options={[{ value: '', label: t('selecciona') }, { value: 'organico', label: t('organico_desc') },
+            { value: 'pagado', label: t('pagado_desc') }, { value: 'referidos', label: t('referidos') },
+            { value: 'mixto', label: t('mixto') }]} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Input label="Ticket promedio (USD)" type="number" value={local.avgTicket}
+        <Input label={t('ticket_promedio_usd')} type="number" value={local.avgTicket}
           onChange={e => setLocal(p => ({ ...p, avgTicket: e.target.value }))} placeholder="500" />
-        <Input label="Meta mensual de facturación (USD)" type="number" value={local.monthlyGoal}
+        <Input label={t('meta_mensual')} type="number" value={local.monthlyGoal}
           onChange={e => setLocal(p => ({ ...p, monthlyGoal: e.target.value }))} placeholder="10000" />
-        <Input label="Tamaño del equipo" type="number" value={local.teamSize}
+        <Input label={t('tamano_equipo')} type="number" value={local.teamSize}
           onChange={e => setLocal(p => ({ ...p, teamSize: e.target.value }))} placeholder="3" />
       </div>
 
       <div className="border-t border-dark-700 pt-4 space-y-4">
-        <Toggle label="¿El servicio es recurrente/suscripción?" checked={local.recurring}
-          onChange={v => setLocal(p => ({ ...p, recurring: v }))} description="Plan mensual, membresía, retainer, etc." />
+        <Toggle label={t('servicio_recurrente')} checked={local.recurring}
+          onChange={v => setLocal(p => ({ ...p, recurring: v }))} description={t('servicio_recurrente_desc')} />
         {local.recurring && (
-          <Input label="Tiempo promedio de vida del cliente (meses)" type="number" value={local.avgClientLifetime}
+          <Input label={t('tiempo_vida_cliente')} type="number" value={local.avgClientLifetime}
             onChange={e => setLocal(p => ({ ...p, avgClientLifetime: e.target.value }))} placeholder="6" />
         )}
       </div>
 
       <div className="border-t border-dark-700 pt-4 space-y-4">
-        <Input label="Inversión mensual en publicidad (USD, opcional)" type="number" value={local.monthlyAdSpend}
+        <Input label={t('inversion_ads')} type="number" value={local.monthlyAdSpend}
           onChange={e => setLocal(p => ({ ...p, monthlyAdSpend: e.target.value }))} placeholder="1000" />
-        <CheckboxGroup label="Plataformas de ads activas" options={AD_PLATFORMS}
+        <CheckboxGroup label={t('plataformas_ads')} options={AD_PLATFORMS}
           selected={local.adPlatforms || []} onChange={v => setLocal(p => ({ ...p, adPlatforms: v }))} />
       </div>
     </div>
@@ -272,6 +286,7 @@ function NegocioTab({ local, setLocal }) {
 }
 
 function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpired }) {
+  const { t } = useLanguage();
   const [editingKey, setEditingKey] = useState(!local.openrouterKey);
   const [modelSearch, setModelSearch] = useState('');
 
@@ -293,18 +308,18 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
   return (
     <div className="space-y-6">
       <div className="p-4 bg-dark-700/50 rounded-card border border-dark-600 text-sm text-dark-400 leading-relaxed">
-        La API key se guarda en el servidor — estará disponible desde cualquier dispositivo al iniciar sesión.
+        {t('apikey_guardada')}
       </div>
 
       {keyExpired && (
         <div className="flex items-center gap-3 p-3 rounded-card bg-error/10 border border-error/30 text-error text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          La API key expiró o es inválida. Límpiala e ingresa una nueva.
+          {t('apikey_expirada')}
         </div>
       )}
 
       <div>
-        <label className="block text-sm text-gray-400 mb-1.5">API Key de OpenRouter</label>
+        <label className="block text-sm text-gray-400 mb-1.5">{t('apikey_openrouter')}</label>
         {editingKey ? (
           <div className="flex gap-2">
             <input
@@ -318,7 +333,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
             {local.openrouterKey && (
               <button type="button" onClick={() => setEditingKey(false)}
                 className="px-3 py-2 text-xs bg-dark-700 border border-dark-600 rounded-button text-gray-300 hover:border-dark-500 transition-colors whitespace-nowrap">
-                Cancelar
+                {t('cancelar')}
               </button>
             )}
           </div>
@@ -326,7 +341,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
           <div className="flex items-center gap-2 bg-dark-700 border border-dark-600 rounded-button px-3 py-2">
             <span className="flex-1 font-mono text-sm text-dark-400 tracking-wider">{maskedKey}</span>
             <button type="button" onClick={() => { setLocal(p => ({ ...p, openrouterKey: '' })); setEditingKey(true); }}
-              className="p-1 text-dark-500 hover:text-error transition-colors" title="Limpiar y cambiar API key">
+              className="p-1 text-dark-500 hover:text-error transition-colors" title={t('limpiar_cambiar_apikey')}>
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
@@ -335,11 +350,11 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
 
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="secondary" onClick={onTest} loading={isTesting} disabled={!local.openrouterKey || isTesting}>
-          Probar conexión
+          {t('probar_conexion')}
         </Button>
         {testResult === 'ok' && (
           <span className="flex items-center gap-1.5 text-sm text-accent-green">
-            <CheckCircle2 className="w-4 h-4" /> Conexión exitosa · {models.length} modelos disponibles
+            <CheckCircle2 className="w-4 h-4" /> {t('conexion_exitosa')} · {models.length} {t('modelos_disponibles')}
           </span>
         )}
         {testResult && testResult !== 'ok' && (
@@ -353,7 +368,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
         <div className="space-y-3">
           <input
             className="w-full bg-dark-700 border border-dark-600 rounded-button px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-accent-orange placeholder:text-dark-500"
-            placeholder='Buscar modelo... (escribe "free" para gratuitos)'
+            placeholder={t('buscar_modelo_placeholder')}
             value={modelSearch}
             onChange={e => setModelSearch(e.target.value)}
           />
@@ -362,10 +377,10 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-dark-800">
                   <tr className="text-dark-400">
-                    <th className="text-left p-2.5">Modelo</th>
+                    <th className="text-left p-2.5">{t('modelo_col')}</th>
                     <th className="text-right p-2.5 hidden sm:table-cell">In /M tok</th>
                     <th className="text-right p-2.5 hidden sm:table-cell">Out /M tok</th>
-                    <th className="text-right p-2.5">~Costo</th>
+                    <th className="text-right p-2.5">~{t('costo_analisis').split(' ')[0]}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -381,29 +396,29 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
                           <div className="flex items-center gap-2 min-w-0">
                             {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-accent-orange shrink-0" />}
                             <span className="truncate">{m.name || m.id}</span>
-                            {m.free && <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-accent-green/15 text-accent-green">GRATIS</span>}
+                            {m.free && <span className="shrink-0 px-1.5 py-0.5 text-[10px] rounded bg-accent-green/15 text-accent-green">{t('gratis')}</span>}
                           </div>
                         </td>
                         <td className="p-2.5 text-right text-dark-400 hidden sm:table-cell">${m.inputPricePerM.toFixed(2)}</td>
                         <td className="p-2.5 text-right text-dark-400 hidden sm:table-cell">${m.outputPricePerM.toFixed(2)}</td>
                         <td className="p-2.5 text-right font-mono text-accent-green">
-                          {estCost === 0 ? 'Gratis' : `$${estCost.toFixed(4)}`}
+                          {estCost === 0 ? t('gratis_lower') : `$${estCost.toFixed(4)}`}
                         </td>
                       </tr>
                     );
                   })}
                   {filteredModels.length === 0 && (
-                    <tr><td colSpan={4} className="p-4 text-center text-dark-500">Sin resultados para "{modelSearch}"</td></tr>
+                    <tr><td colSpan={4} className="p-4 text-center text-dark-500">{t('sin_resultados_para')} "{modelSearch}"</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
           <p className="text-xs text-dark-500">
-            Click en una fila para seleccionar el modelo. Lista actualizada automáticamente cada 60 s.
+            {t('click_seleccionar_modelo')}
             {local.aiModel && (
               <span className="ml-2 text-dark-400">
-                Seleccionado: <span className="text-gray-300 font-mono">{local.aiModel}</span>
+                {t('seleccionado_label')}: <span className="text-gray-300 font-mono">{local.aiModel}</span>
               </span>
             )}
           </p>
@@ -443,7 +458,7 @@ export default function Settings({ onClose, onClearCache }) {
       });
       if (res.status === 401) {
         setKeyExpired(true);
-        setTestResult('API key inválida o expirada');
+        setTestResult(t('apikey_invalida'));
       } else if (res.ok) {
         const data = await res.json();
         setModels(data.models || []);
@@ -464,7 +479,7 @@ export default function Settings({ onClose, onClearCache }) {
 
       <div className="relative ml-auto w-full max-w-2xl h-full bg-dark-800 border-l border-dark-700 flex flex-col shadow-2xl animate-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-700">
-          <h2 className="text-lg font-semibold text-gray-100">Ajustes del Dashboard</h2>
+          <h2 className="text-lg font-semibold text-gray-100">{t('ajustes_dashboard')}</h2>
           <button onClick={onClose} className="p-2 hover:bg-dark-700 rounded-lg text-dark-400 hover:text-gray-200 transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -504,11 +519,11 @@ export default function Settings({ onClose, onClearCache }) {
           ) : <span />}
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+            <Button variant="ghost" onClick={onClose}>{t('cancelar')}</Button>
             <Button onClick={handleSave}>
               {saved
-                ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> Guardado</>
-                : <><Save className="w-4 h-4" /> Guardar ajustes</>
+                ? <><CheckCircle2 className="w-4 h-4 text-accent-green" /> {t('guardado')}</>
+                : <><Save className="w-4 h-4" /> {t('guardar_ajustes')}</>
               }
             </Button>
           </div>
