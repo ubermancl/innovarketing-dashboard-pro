@@ -52,6 +52,7 @@ function MetricCard({ title, value, change, icon: Icon, format = 'number', dange
 }
 
 export default function Cards({ metrics, advancedMetrics, aiVsManual, businessContext }) {
+  const { t } = useLanguage();
   const {
     totalLeads, inConversacion, newLeads, scheduled,
     conversionRate, revenue, requiresAttention,
@@ -65,41 +66,41 @@ export default function Cards({ metrics, advancedMetrics, aiVsManual, businessCo
     <div className="space-y-3">
       {/* Fila 1 — métricas principales del embudo */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <MetricCard title="Total Leads" value={totalLeads} icon={Users} />
-        <MetricCard title="Leads (período)" value={newLeads} change={changes?.newLeads} icon={TrendingUp} />
-        <MetricCard title="En Conversación" value={inConversacion} icon={MessageCircle} />
-        <MetricCard title="Citas Agendadas" value={scheduled} change={changes?.scheduled} icon={CalendarCheck} />
-        <MetricCard title="Tasa Conversión" value={conversionRate} change={changes?.conversionRate} icon={BarChart3} format="percent" />
-        <MetricCard title="Revenue Período" value={revenue} change={changes?.revenue} icon={DollarSign} format="currency" />
+        <MetricCard title={t('metric_total_leads')} value={totalLeads} icon={Users} />
+        <MetricCard title={t('metric_leads_periodo')} value={newLeads} change={changes?.newLeads} icon={TrendingUp} />
+        <MetricCard title={t('metric_en_conversacion')} value={inConversacion} icon={MessageCircle} />
+        <MetricCard title={t('metric_citas_agendadas')} value={scheduled} change={changes?.scheduled} icon={CalendarCheck} />
+        <MetricCard title={t('metric_tasa_conversion')} value={conversionRate} change={changes?.conversionRate} icon={BarChart3} format="percent" />
+        <MetricCard title={t('metric_revenue_periodo')} value={revenue} change={changes?.revenue} icon={DollarSign} format="currency" />
       </div>
 
       {/* Fila 2 — KPIs operacionales */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        <MetricCard title="Sin Respuesta +24h" value={leadsWithoutResponse24h} icon={Clock} danger />
-        <MetricCard title="Requiere Atención" value={requiresAttention} icon={AlertTriangle} danger />
+        <MetricCard title={t('metric_sin_respuesta')} value={leadsWithoutResponse24h} icon={Clock} danger />
+        <MetricCard title={t('metric_requiere_atencion')} value={requiresAttention} icon={AlertTriangle} danger />
         <MetricCard
-          title="Atendidos por IA"
+          title={t('metric_atendidos_ia')}
           value={aiVsManual?.ai || 0}
           icon={Bot}
-          subtitle={aiVsManual ? `${(aiVsManual.aiPct * 100).toFixed(0)}% del total` : null}
+          subtitle={aiVsManual ? `${(aiVsManual.aiPct * 100).toFixed(0)}% ${t('del_total')}` : null}
           notConfigured={!aiVsManual}
         />
         <MetricCard
-          title="CAC Estimado"
+          title={t('metric_cac_estimado')}
           value={cac || 0}
           icon={Target}
           format="currency"
           notConfigured={!hasAdSpend}
         />
         <MetricCard
-          title="Forecast Mes"
+          title={t('metric_forecast_mes')}
           value={forecast}
           icon={Zap}
           format="currency"
-          subtitle="Basado en run rate"
+          subtitle={t('basado_run_rate')}
         />
         <MetricCard
-          title="Ticket Promedio Real"
+          title={t('metric_ticket_promedio')}
           value={advancedMetrics?.avgTicket || 0}
           icon={DollarSign}
           format="currency"
