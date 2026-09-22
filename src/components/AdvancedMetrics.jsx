@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Clock, UserX, CheckCircle, Receipt, MapPin, Calendar, Clock3, RefreshCw, ChevronDown, TrendingUp } from 'lucide-react';
 import { Card } from './ui';
 import { formatPercent, formatCurrency } from '../utils/formatters';
+import { useLanguage } from '../hooks/useLanguage';
 
 function MiniCard({ title, value, icon: Icon, tooltip }) {
   return (
@@ -25,13 +26,14 @@ function MiniCard({ title, value, icon: Icon, tooltip }) {
 }
 
 export default function AdvancedMetrics({ metrics }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(true);
   const { avgTimeToSchedule, noShowRate, closeRate, avgTicket, bestDistrict, bestDay, peakHour } = metrics;
 
   const summary = [
-    closeRate > 0 && `Cierre ${formatPercent(closeRate)}`,
-    noShowRate > 0 && `No-Show ${formatPercent(noShowRate)}`,
-    avgTicket > 0 && `Ticket ${formatCurrency(avgTicket)}`,
+    closeRate > 0 && `${t('cierre_label')} ${formatPercent(closeRate)}`,
+    noShowRate > 0 && `${t('no_show_label')} ${formatPercent(noShowRate)}`,
+    avgTicket > 0 && `${t('ticket_label')} ${formatCurrency(avgTicket)}`,
   ].filter(Boolean).join(' · ');
 
   return (
@@ -39,7 +41,7 @@ export default function AdvancedMetrics({ metrics }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 min-w-0">
           <TrendingUp className="w-4 h-4 text-dark-400 shrink-0" />
-          <h3 className="text-sm font-semibold text-gray-200 shrink-0">Métricas Avanzadas</h3>
+          <h3 className="text-sm font-semibold text-gray-200 shrink-0">{t('metricas_avanzadas')}</h3>
           {!expanded && summary && (
             <span className="text-xs text-dark-400 truncate hidden sm:block ml-1">{summary}</span>
           )}
@@ -55,52 +57,52 @@ export default function AdvancedMetrics({ metrics }) {
       {expanded && (
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
           <MiniCard
-            title="Tiempo → Cita"
+            title={t('tiempo_a_cita')}
             value={avgTimeToSchedule != null ? `${avgTimeToSchedule.toFixed(1)}d` : null}
             icon={Clock}
-            tooltip="Promedio de días entre creación del lead y fecha de agendamiento."
+            tooltip={t('tooltip_tiempo_respuesta')}
           />
           <MiniCard
-            title="Tasa No-Show"
+            title={t('tasa_no_show')}
             value={formatPercent(noShowRate)}
             icon={UserX}
-            tooltip="No Asistió ÷ (Asistió + No Asistió)."
+            tooltip={t('tooltip_no_show')}
           />
           <MiniCard
-            title="Tasa de Cierre"
+            title={t('tasa_cierre')}
             value={formatPercent(closeRate)}
             icon={CheckCircle}
-            tooltip="Compró ÷ Asistió. De los que vinieron a consulta, cuántos compraron."
+            tooltip={t('tooltip_tasa_cierre')}
           />
           <MiniCard
-            title="Ticket Promedio"
+            title={t('ticket_promedio')}
             value={formatCurrency(avgTicket)}
             icon={Receipt}
-            tooltip="Suma de ventas ÷ número de ventas cerradas."
+            tooltip={t('tooltip_ticket_promedio')}
           />
           <MiniCard
-            title="Mejor Zona"
+            title={t('mejor_zona')}
             value={bestDistrict}
             icon={MapPin}
-            tooltip="Zona o distrito con más conversiones."
+            tooltip={t('tooltip_mejor_zona')}
           />
           <MiniCard
-            title="Mejor Día"
+            title={t('mejor_dia')}
             value={bestDay || '—'}
             icon={Calendar}
-            tooltip="Día de la semana con más leads entrantes. Concentra inversión en ads ese día."
+            tooltip={t('tooltip_mejor_dia')}
           />
           <MiniCard
-            title="Hora Pico"
+            title={t('hora_pico')}
             value={peakHour != null ? `${peakHour} h` : '—'}
             icon={Clock3}
-            tooltip="Hora con más leads. Responder en la primera hora tiene 7× más conversión."
+            tooltip={t('tooltip_mejor_hora')}
           />
           <MiniCard
-            title="Leads Recuperables"
+            title={t('leads_recuperables')}
             value={metrics.notBought > 0 ? metrics.notBought : '—'}
             icon={RefreshCw}
-            tooltip="Leads en estado 'No Compró' — candidatos a campaña de retargeting."
+            tooltip={t('tooltip_retargeting')}
           />
         </div>
       )}

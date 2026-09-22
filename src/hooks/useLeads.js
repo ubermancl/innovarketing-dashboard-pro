@@ -41,8 +41,9 @@ export function useLeads() {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Filtros
-  const [dateFilter, setDateFilter] = useState('month');
+  // Filtros — 'all' por default: el cliente quiere ver el registro histórico
+  // máximo al entrar, no solo el mes en curso.
+  const [dateFilter, setDateFilter] = useState('all');
   const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

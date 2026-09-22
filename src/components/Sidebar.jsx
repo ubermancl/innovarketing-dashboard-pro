@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { LayoutDashboard, BarChart2, Brain, Table2, Settings, LogOut, Wifi, WifiOff, Menu, X, RefreshCw } from 'lucide-react';
 import { useBusinessContext } from '../hooks/useBusinessContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard',    icon: LayoutDashboard },
-  { id: 'analytics', label: 'Análisis',     icon: BarChart2 },
-  { id: 'ai',        label: 'IA & Historial', icon: Brain },
-  { id: 'tabla',     label: 'Leads',        icon: Table2 },
+  { id: 'dashboard', key: 'nav_dashboard',    icon: LayoutDashboard },
+  { id: 'analytics', key: 'nav_analisis',     icon: BarChart2 },
+  { id: 'ai',        key: 'nav_ia_historial', icon: Brain },
+  { id: 'tabla',     key: 'nav_leads',        icon: Table2 },
 ];
 
-function NavItem({ item, active, onClick }) {
+function NavItem({ item, active, onClick, label }) {
   const Icon = item.icon;
   return (
     <button
@@ -21,7 +22,7 @@ function NavItem({ item, active, onClick }) {
       }`}
     >
       <Icon className="w-4 h-4 shrink-0" />
-      <span>{item.label}</span>
+      <span>{label}</span>
     </button>
   );
 }
@@ -33,6 +34,7 @@ export default function Sidebar({
   onOpenSettings, onLogout,
 }) {
   const { businessContext } = useBusinessContext();
+  const { t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
   const displayName = businessContext?.businessName || 'Dashboard Pro';
   const logoUrl = businessContext?.logoUrl || '';
@@ -69,6 +71,7 @@ export default function Sidebar({
           <NavItem
             key={item.id}
             item={item}
+            label={t(item.key)}
             active={activeView === item.id}
             onClick={(id) => { onViewChange(id); setMobileOpen(false); }}
           />
@@ -97,7 +100,7 @@ export default function Sidebar({
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-button text-sm text-dark-400 hover:text-gray-200 hover:bg-dark-600/50 transition-colors"
         >
           <RefreshCw className={`w-4 h-4 shrink-0 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{isRefreshing ? 'Actualizando...' : 'Actualizar datos'}</span>
+          <span>{isRefreshing ? t('actualizando') : t('actualizar_datos')}</span>
         </button>
 
         {/* Settings */}
@@ -106,7 +109,7 @@ export default function Sidebar({
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-button text-sm text-dark-400 hover:text-gray-200 hover:bg-dark-600/50 transition-colors"
         >
           <Settings className="w-4 h-4 shrink-0" />
-          <span>Ajustes</span>
+          <span>{t('nav_ajustes')}</span>
         </button>
 
         {/* Logout */}
@@ -115,14 +118,14 @@ export default function Sidebar({
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-button text-sm text-dark-400 hover:text-error hover:bg-error/5 transition-colors"
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          <span>Cerrar sesión</span>
+          <span>{t('cerrar_sesion')}</span>
         </button>
       </div>
 
       {/* Footer */}
       <div className="px-4 pb-4">
         <p className="text-xs text-dark-500">
-          por{' '}
+          {t('footer_por')}{' '}
           <a href="https://innovarketing.com" target="_blank" rel="noopener noreferrer" className="hover:text-accent-orange transition-colors">
             Innovarketing.com
           </a>

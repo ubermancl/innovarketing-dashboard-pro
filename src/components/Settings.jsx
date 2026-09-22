@@ -1,12 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
-import { Save, X, Bot, Building2, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Save, X, Bot, Building2, Globe, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { useBusinessContext } from '../hooks/useBusinessContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { Button, Input, Select } from './ui';
 
 const TABS = [
   { id: 'negocio', label: 'Contexto del Negocio', icon: Building2 },
   { id: 'ia', label: 'IA & OpenRouter', icon: Bot },
+  { id: 'idioma', labelKey: 'idioma', icon: Globe },
 ];
+
+function IdiomaTab() {
+  const { t, lang, setLang } = useLanguage();
+  return (
+    <div className="space-y-4 max-w-sm">
+      <p className="text-sm text-dark-400">{t('idioma')}</p>
+      <div className="flex items-center bg-dark-700 border border-dark-600 rounded-button overflow-hidden w-fit">
+        <button
+          onClick={() => setLang('es')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${lang === 'es' ? 'bg-accent-orange text-white' : 'text-dark-400 hover:text-gray-200'}`}
+        >
+          Español
+        </button>
+        <button
+          onClick={() => setLang('en')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${lang === 'en' ? 'bg-accent-orange text-white' : 'text-dark-400 hover:text-gray-200'}`}
+        >
+          English
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const VERTICALS = [
   { value: 'clinica', label: 'Clínica / Salud' },
@@ -390,6 +415,7 @@ function IATab({ local, setLocal, testResult, onTest, isTesting, models, keyExpi
 
 export default function Settings({ onClose, onClearCache }) {
   const { businessContext, saveBusinessContext } = useBusinessContext();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('negocio');
   const [local, setLocal] = useState({ ...businessContext });
   const [saved, setSaved] = useState(false);
@@ -453,7 +479,7 @@ export default function Settings({ onClose, onClearCache }) {
                   : 'border-transparent text-dark-400 hover:text-gray-300'
               }`}>
               <tab.icon className="w-4 h-4" />
-              {tab.label}
+              {tab.labelKey ? t(tab.labelKey) : tab.label}
             </button>
           ))}
         </div>
@@ -464,15 +490,16 @@ export default function Settings({ onClose, onClearCache }) {
             <IATab local={local} setLocal={setLocal} testResult={testResult}
               onTest={testConnection} isTesting={isTesting} models={models} keyExpired={keyExpired} />
           )}
+          {activeTab === 'idioma' && <IdiomaTab />}
         </div>
 
         <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-between gap-3">
           {onClearCache ? (
             <button type="button" onClick={onClearCache}
               className="text-xs text-dark-500 hover:text-error transition-colors flex items-center gap-1.5"
-              title="Elimina los datos en caché del navegador. Los datos reales en NocoDB no se tocan.">
+              title={t('borrar_cache_tooltip')}>
               <Trash2 className="w-3.5 h-3.5" />
-              Borrar caché de datos
+              {t('borrar_cache')}
             </button>
           ) : <span />}
 

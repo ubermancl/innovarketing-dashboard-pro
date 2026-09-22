@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useBusinessContext } from '../hooks/useBusinessContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { Button, Input, Card } from './ui';
 
 export default function Login() {
+  const { t } = useLanguage();
   const { login, isLoading, error, clearError } = useAuth();
   const { businessContext } = useBusinessContext();
   const [password, setPassword] = useState('');
@@ -42,10 +44,10 @@ export default function Login() {
           <div className="relative">
             <Input
               type={showPassword ? 'text' : 'password'}
-              label="Contraseña"
+              label={t('password_label')}
               value={password}
               onChange={(e) => { setPassword(e.target.value); if (error) clearError(); }}
-              placeholder="Ingresa tu contraseña"
+              placeholder={t('password_placeholder')}
               disabled={isLoading}
               autoFocus
             />
@@ -60,7 +62,7 @@ export default function Login() {
 
           <Button type="submit" className="w-full" size="lg" loading={isLoading} disabled={!password.trim()}>
             <Lock className="w-4 h-4" />
-            Ingresar al Dashboard
+            {t('ingresar_dashboard')}
           </Button>
         </form>
 

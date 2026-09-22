@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sparkles, Brain, AlertCircle, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle2, Info } from 'lucide-react';
 import { Card, Button } from './ui';
 import { useBusinessContext } from '../hooks/useBusinessContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { callOpenRouter, buildDiagnosisPrompt } from '../api/openrouter';
 import { estimateCost, projectMonthlyCost, costPerLead, costPerConversion, formatCostUSD } from '../utils/aiCostEstimator';
 import { AI_MODELS } from '../utils/constants';
@@ -143,6 +144,7 @@ export default function AIDiagnosis({
   dateFilter,
 }) {
   const { businessContext } = useBusinessContext();
+  const { t } = useLanguage();
   const [result, setResult] = useState(null);
   const [costData, setCostData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -209,15 +211,15 @@ export default function AIDiagnosis({
             <Brain className="w-5 h-5 text-accent-orange" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-gray-100">Diagnóstico IA</h3>
-            <p className="text-xs text-dark-400">Teoría de Restricciones aplicada a tus datos</p>
+            <h3 className="text-base font-semibold text-gray-100">{t('diagnostico_ia')}</h3>
+            <p className="text-xs text-dark-400">{t('toc_aplicada')}</p>
           </div>
         </div>
         <div className="p-6 text-center border border-dark-600 rounded-card bg-dark-700/30">
           <Brain className="w-10 h-10 text-dark-500 mx-auto mb-3" />
-          <p className="text-gray-300 font-medium mb-2">Conecta tu API key para activar el Diagnóstico IA</p>
-          <p className="text-sm text-dark-400 mb-2">3 insights accionables por sesión · Teoría de Restricciones · Historial en NocoDB</p>
-          <p className="text-xs text-dark-500">Ajustes → IA & OpenRouter</p>
+          <p className="text-gray-300 font-medium mb-2">{t('conecta_api_key')}</p>
+          <p className="text-sm text-dark-400 mb-2">{t('insights_por_sesion')}</p>
+          <p className="text-xs text-dark-500">{t('ajustes_ia_openrouter')}</p>
         </div>
       </Card>
     );
@@ -233,7 +235,7 @@ export default function AIDiagnosis({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h3 className="text-base font-semibold text-gray-100">Diagnóstico IA</h3>
+              <h3 className="text-base font-semibold text-gray-100">{t('diagnostico_ia')}</h3>
               <DiagnosisInfo />
             </div>
             <p className="text-xs text-dark-400">

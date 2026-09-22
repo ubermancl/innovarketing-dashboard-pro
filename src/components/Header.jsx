@@ -1,24 +1,25 @@
 import { useState, useRef } from 'react';
 import { Calendar, X, FileDown, Loader2, ChevronDown } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { es, enUS } from 'date-fns/locale';
 import { Button } from './ui';
+import { useLanguage } from '../hooks/useLanguage';
 
-const DATE_FILTERS = [
-  { value: 'today',  label: 'Hoy' },
-  { value: 'week',   label: 'Esta semana' },
-  { value: 'last7',  label: 'Últimos 7 días' },
-  { value: 'month',  label: 'Este mes' },
-  { value: 'last30', label: 'Últimos 30 días' },
-  { value: 'last90', label: 'Últimos 90 días' },
-  { value: 'all',    label: 'Registro Histórico Máximo' },
-  { value: 'custom', label: 'Personalizado' },
+const DATE_FILTER_KEYS = [
+  { value: 'today',  key: 'periodo_hoy' },
+  { value: 'week',   key: 'periodo_semana' },
+  { value: 'last7',  key: 'periodo_last7' },
+  { value: 'month',  key: 'periodo_mes' },
+  { value: 'last30', key: 'periodo_last30' },
+  { value: 'last90', key: 'periodo_last90' },
+  { value: 'all',    key: 'periodo_all' },
+  { value: 'custom', key: 'periodo_custom' },
 ];
 
 function DateInput({ value, onChange, placeholder }) {
   const inputRef = useRef(null);
   const formatDisplay = (d) => {
-    if (!d) return placeholder || 'DD/MM/AAAA';
+    if (!d) return placeholder || 'DD/MM/YYYY';
     const [y, m, day] = d.split('-');
     return `${day}/${m}/${y}`;
   };
@@ -44,6 +45,9 @@ export default function Header({
   customDateRange, onCustomDateChange,
   activeView,
 }) {
+  const { t, lang, setLang } = useLanguage();
+  const dateLocale = lang === 'es' ? es : enUS;
+  const DATE_FILTERS = DATE_FILTER_KEYS.map(f => ({ value: f.value, label: t(f.key) }));
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [tempStart, setTempStart] = useState('');
   const [tempEnd, setTempEnd] = useState('');
@@ -70,9 +74,9 @@ export default function Header({
 
   const periodLabel = () => {
     const now = new Date();
-    const fmt = (d) => format(d, 'd MMM', { locale: es });
+    const fmt = (d) => format(d, 'd MMM', { locale: dateLocale });
     switch (dateFilter) {
-      case 'today':  return format(now, "d 'de' MMM yyyy", { locale: es });
+      case 'today':  return format(now, lang === 'es' ? "d 'de' MMM yyyy" : "MMM d, yyyy", { locale: dateLocale });
       case 'week': {
         const s = startOfWeek(now, { weekStartsOn: 1 });
         const e = endOfWeek(now, { weekStartsOn: 1 });
@@ -86,17 +90,17 @@ export default function Header({
       }
       case 'last30': return `${fmt(subDays(now, 29))} — ${fmt(now)}`;
       case 'last90': return `${fmt(subDays(now, 89))} — ${fmt(now)}`;
-      case 'all': return 'Todo el registro histórico';
+      case 'all': return t('todo_registro');
       case 'custom':
         if (customDateRange.start && customDateRange.end) {
           return `${fmt(new Date(customDateRange.start))} — ${fmt(new Date(customDateRange.end))}`;
         }
-        return 'Personalizado';
-      default: return 'Este mes';
+        return t('periodo_custom');
+      default: return t('periodo_mes');
     }
   };
 
-  const currentLabel = DATE_FILTERS.find(f => f.value === dateFilter)?.label || 'Este mes';
+  const currentLabel = DATE_FILTERS.find(f => f.value === dateFilter)?.label || t('periodo_mes');
 
   const exportPDF = async () => {
     setIsExporting(true);
@@ -129,10 +133,10 @@ export default function Header({
   };
 
   const VIEW_LABELS = {
-    dashboard: 'Resumen',
-    analytics: 'Análisis',
-    ai: 'IA & Historial',
-    tabla: 'Tabla de Leads',
+    dashboard: t('view_resumen'),
+    analytics: t('nav_analisis'),
+    ai: t('nav_ia_historial'),
+    tabla: t('view_tabla'),
   };
 
   return (
@@ -146,6 +150,22 @@ export default function Header({
 
         {/* Controles */}
         <div className="flex items-center gap-2 no-print">
+          {/* Selector de idioma */}
+          <div className="flex items-center bg-dark-700 border border-dark-600 rounded-button overflow-hidden text-xs font-medium">
+            <button
+              onClick={() => setLang('es')}
+              className={`px-2.5 py-2 transition-colors ${lang === 'es' ? 'bg-accent-orange text-white' : 'text-dark-400 hover:text-gray-200'}`}
+            >
+              ES
+            </button>
+            <button
+              onClick={() => setLang('en')}
+              className={`px-2.5 py-2 transition-colors ${lang === 'en' ? 'bg-accent-orange text-white' : 'text-dark-400 hover:text-gray-200'}`}
+            >
+              EN
+            </button>
+          </div>
+
           {/* Selector de período */}
           <div className="relative">
             <button
@@ -179,11 +199,11 @@ export default function Header({
           {/* Custom date range */}
           {showCustomPicker && (
             <div className="flex items-center gap-2 bg-dark-800 border border-dark-700 rounded-card px-3 py-2">
-              <DateInput value={tempStart} onChange={e => setTempStart(e.target.value)} placeholder="Desde" />
+              <DateInput value={tempStart} onChange={e => setTempStart(e.target.value)} placeholder={t('desde')} />
               <span className="text-dark-400 text-xs">→</span>
-              <DateInput value={tempEnd} onChange={e => setTempEnd(e.target.value)} placeholder="Hasta" />
+              <DateInput value={tempEnd} onChange={e => setTempEnd(e.target.value)} placeholder={t('hasta')} />
               <button onClick={applyCustom} className="px-3 py-1.5 bg-accent-orange text-white text-xs rounded-button hover:bg-accent-orange/90 transition-colors">
-                Aplicar
+                {t('aplicar')}
               </button>
               <button onClick={() => setShowCustomPicker(false)} className="text-dark-400 hover:text-gray-300">
                 <X className="w-4 h-4" />
@@ -197,13 +217,13 @@ export default function Header({
               onClick={exportPDF}
               disabled={isExporting}
               className="flex items-center gap-2 px-3 py-2 rounded-button bg-dark-700 border border-dark-600 text-sm text-gray-300 hover:border-dark-500 transition-colors disabled:opacity-50"
-              title="Exportar PDF"
+              title={t('exportar_pdf')}
             >
               {isExporting
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 : <FileDown className="w-3.5 h-3.5" />
               }
-              <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'PDF'}</span>
+              <span className="hidden sm:inline">{isExporting ? t('exportando') : 'PDF'}</span>
             </button>
           )}
         </div>

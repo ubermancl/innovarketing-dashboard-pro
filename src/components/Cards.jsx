@@ -3,8 +3,10 @@ import {
   Clock, Bot, Target, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
 import { formatNumber, formatCurrency, formatPercent, formatChange } from '../utils/formatters';
+import { useLanguage } from '../hooks/useLanguage';
 
 function MetricCard({ title, value, change, icon: Icon, format = 'number', danger = false, subtitle = null, notConfigured = false }) {
+  const { t } = useLanguage();
   const formatted = notConfigured
     ? '—'
     : format === 'currency' ? formatCurrency(value)
@@ -29,7 +31,7 @@ function MetricCard({ title, value, change, icon: Icon, format = 'number', dange
           {formatted}
         </p>
         {subtitle && <p className="text-xs text-dark-400 mt-1">{subtitle}</p>}
-        {notConfigured && <p className="text-xs text-dark-500 mt-1">Configura en Ajustes</p>}
+        {notConfigured && <p className="text-xs text-dark-500 mt-1">{t('configura_ajustes')}</p>}
       </div>
 
       {changeData && (
@@ -42,7 +44,7 @@ function MetricCard({ title, value, change, icon: Icon, format = 'number', dange
           {changeData.positive === false && <ArrowDownRight className="w-3 h-3" />}
           {changeData.positive === null && <Minus className="w-3 h-3" />}
           <span>{changeData.text}</span>
-          <span className="text-dark-500 ml-1">vs anterior</span>
+          <span className="text-dark-500 ml-1">{t('vs_anterior')}</span>
         </div>
       )}
     </div>

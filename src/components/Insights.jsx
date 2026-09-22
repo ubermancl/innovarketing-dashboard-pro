@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lightbulb, ChevronDown } from 'lucide-react';
 import { Card } from './ui';
+import { useLanguage } from '../hooks/useLanguage';
 
 const insightStyles = {
   action:  'border-accent-orange/30 bg-accent-orange/5',
@@ -11,6 +12,7 @@ const insightStyles = {
 // Insights dinámicos del CRM — todos visibles, sin paywall.
 // El Diagnóstico IA (OpenRouter) es el nivel premium separado.
 export default function Insights({ insights }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(true);
 
   if (!insights || insights.length === 0) return null;
@@ -22,7 +24,7 @@ export default function Insights({ insights }) {
           <div className="p-2 rounded-lg bg-accent-orange/10">
             <Lightbulb className="w-4 h-4 text-accent-orange" />
           </div>
-          <h3 className="text-base font-semibold text-gray-100">Señales del CRM</h3>
+          <h3 className="text-base font-semibold text-gray-100">{t('senales_crm')}</h3>
           <span className="text-xs px-2 py-0.5 bg-dark-700 text-dark-400 rounded-full">{insights.length}</span>
         </div>
         <button

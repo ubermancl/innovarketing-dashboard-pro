@@ -1,7 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
-import { History, ChevronDown, Zap, AlertTriangle, Loader2, StickyNote, Trash2, X, Bot } from 'lucide-react';
+import { History, ChevronDown, Zap, AlertTriangle, Loader2, StickyNote, Trash2, X, Bot, CalendarClock } from 'lucide-react';
+import { addDays, isPast } from 'date-fns';
 import { Card } from './ui';
 import { formatDateTime } from '../utils/formatters';
+import { useLanguage } from '../hooks/useLanguage';
+
+// Cadencia sugerida entre análisis IA — 7 días es un default razonable para
+// este tipo de metricas de negocio, ajustable si el cliente lo pide.
+const SUGGESTED_CADENCE_DAYS = 7;
+
+function LastAnalysisBanner({ lastDate, t, lang }) {
+  if (!lastDate) return null;
+  const next = addDays(new Date(lastDate), SUGGESTED_CADENCE_DAYS);
+  const nextIsPast = isPast(next);
+  return (
+    <div className="flex items-center gap-2 flex-wrap p-3 mb-4 rounded-card bg-dark-700/50 border border-dark-600 text-xs">
+      <CalendarClock className="w-3.5 h-3.5 text-dark-400 shrink-0" />
+      <span className="text-dark-300">
+        <span className="text-dark-400">{t('ultimo_analisis')}:</span>{' '}
+        <span className="font-medium text-gray-200">{formatDateTime(lastDate)}</span>
+      </span>
+      <span className="text-dark-600">·</span>
+      <span className={nextIsPast ? 'text-accent-orange' : 'text-dark-300'}>
+        <span className="text-dark-400">{t('proximo_analisis_sugerido')}:</span>{' '}
+        <span className="font-medium">
+          {nextIsPast ? t('hoy') : next.toLocaleDateString(lang === 'es' ? 'es-CL' : 'en-US', { day: 'numeric', month: 'short' })}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 const ESTADOS = [
   { value: 'Pendiente',    label: 'Pendiente',    color: 'text-warning bg-warning/10 border-warning/30' },
@@ -30,7 +58,8 @@ function StatusBadge({ estado }) {
 
 // Botón que al hacer clic inicia cuenta regresiva de N segundos.
 // Si llega a 0 llama onConfirm. El usuario puede cancelar mientras cuenta.
-function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesión', size = 'session' }) {
+function CountdownDeleteButton({ onConfirm, isDeleting, label, size = 'session' }) {
+  const { t } = useLanguage();
   const [phase, setPhase] = useState('idle'); // idle | counting | deleting
   const [count, setCount] = useState(COUNTDOWN_SECONDS);
   const intervalRef = useRef(null);
@@ -68,7 +97,7 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesió
     return (
       <span className="flex items-center gap-1 text-xs text-dark-400">
         <Loader2 className="w-3 h-3 animate-spin" />
-        {size === 'session' ? 'Eliminando...' : ''}
+        {size === 'session' ? t('eliminando') : ''}
       </span>
     );
   }
@@ -77,13 +106,13 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesió
     return (
       <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
         <span className="text-xs text-error font-medium whitespace-nowrap">
-          Eliminar en {count}s
+          {t('eliminar_en')} {count}s
         </span>
         <button
           onClick={cancel}
           className="flex items-center gap-0.5 text-xs text-dark-400 hover:text-gray-200 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded px-1.5 py-0.5 transition-colors"
         >
-          <X className="w-3 h-3" /> Cancelar
+          <X className="w-3 h-3" /> {t('cancelar')}
         </button>
       </div>
     );
@@ -94,7 +123,7 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesió
     return (
       <button
         onClick={startCountdown}
-        title={label}
+        title={label || t('eliminar_sesion')}
         className="p-1.5 rounded text-dark-600 hover:text-error hover:bg-error/10 transition-colors"
       >
         <Trash2 className="w-3.5 h-3.5" />
@@ -106,7 +135,7 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesió
   return (
     <button
       onClick={startCountdown}
-      title="Eliminar recomendación"
+      title={t('eliminar_recomendacion')}
       className="p-1 rounded text-dark-600 hover:text-error hover:bg-error/10 transition-colors opacity-0 group-hover:opacity-100"
     >
       <Trash2 className="w-3 h-3" />
@@ -115,6 +144,7 @@ function CountdownDeleteButton({ onConfirm, isDeleting, label = 'Eliminar sesió
 }
 
 function StatusSelector({ id, current, onUpdate, isUpdating }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
@@ -139,7 +169,7 @@ function StatusSelector({ id, current, onUpdate, isUpdating }) {
           className="flex items-center gap-1 text-xs text-dark-400 hover:text-gray-300 transition-colors"
         >
           {isUpdating ? <Loader2 className="w-3 h-3 animate-spin" /> : <ChevronDown className="w-3 h-3" />}
-          Cambiar estado
+          {t('cambiar_estado')}
         </button>
         {open && (
           <div className="absolute top-6 left-0 z-20 bg-dark-800 border border-dark-600 rounded-card shadow-xl min-w-[160px]">
@@ -169,14 +199,14 @@ function StatusSelector({ id, current, onUpdate, isUpdating }) {
           <textarea
             className="w-full bg-dark-700 border border-dark-600 rounded text-xs text-gray-300 p-2 resize-none focus:outline-none focus:border-accent-orange"
             rows={3}
-            placeholder="Nota del cliente sobre esta recomendación..."
+            placeholder={t('nota_cliente_placeholder')}
             value={note}
             onChange={e => setNote(e.target.value)}
             autoFocus
           />
           <div className="flex justify-end gap-2 mt-2">
-            <button onClick={() => setShowNote(false)} className="text-xs text-dark-400 hover:text-gray-300">Cancelar</button>
-            <button onClick={handleSaveNote} className="text-xs text-accent-orange hover:text-accent-orange/80 font-medium">Guardar</button>
+            <button onClick={() => setShowNote(false)} className="text-xs text-dark-400 hover:text-gray-300">{t('cancelar')}</button>
+            <button onClick={handleSaveNote} className="text-xs text-accent-orange hover:text-accent-orange/80 font-medium">{t('guardar')}</button>
           </div>
         </div>
       )}
@@ -185,6 +215,7 @@ function StatusSelector({ id, current, onUpdate, isUpdating }) {
 }
 
 function RecordRow({ rec, onUpdate, updatingId, onDeleteRecord, deletingRecordId }) {
+  const { t } = useLanguage();
   const tipo = TIPO_ICONS[rec.Tipo] || TIPO_ICONS.insight;
   const TypeIcon = tipo.icon;
   const isUpdating = updatingId === rec.Id;
@@ -207,7 +238,7 @@ function RecordRow({ rec, onUpdate, updatingId, onDeleteRecord, deletingRecordId
               />
             </div>
           </div>
-          {rec.Dato && <p className="text-xs text-dark-400 mb-1"><span className="text-accent-orange">Dato:</span> {rec.Dato}</p>}
+          {rec.Dato && <p className="text-xs text-dark-400 mb-1"><span className="text-accent-orange">{t('dato_label')}:</span> {rec.Dato}</p>}
           {rec.Accion && <p className="text-xs text-gray-400 leading-relaxed">{rec.Accion}</p>}
           {rec.Nota_Cliente && (
             <p className="text-xs text-dark-400 italic mt-1 border-l-2 border-dark-600 pl-2">{rec.Nota_Cliente}</p>
@@ -225,6 +256,7 @@ const DONE_STATES = new Set(['Implementada', 'Rechazada']);
 const TYPE_ORDER = { cuello_botella: 0, insight: 1, nota_estrategica: 2 };
 
 function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDeleteRecord, deletingRecordId }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const model = session.records[0]?.Modelo_IA || '';
@@ -255,7 +287,7 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
         <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
             <p className="text-sm font-medium text-gray-200">
-              {date ? formatDateTime(date) : 'Sesión sin fecha'}
+              {date ? formatDateTime(date) : t('sesion_sin_fecha')}
             </p>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
               {model && (
@@ -265,9 +297,9 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
                 </span>
               )}
               <span className="text-xs text-dark-500">
-                {session.records.length} registro{session.records.length !== 1 ? 's' : ''}
-                {pendientes > 0 && <span className="text-warning"> · {pendientes} pendiente{pendientes !== 1 ? 's' : ''}</span>}
-                {implementadas > 0 && <span className="text-accent-green"> · {implementadas} implementada{implementadas !== 1 ? 's' : ''}</span>}
+                {session.records.length} {session.records.length !== 1 ? t('registros') : t('registro')}
+                {pendientes > 0 && <span className="text-warning"> · {pendientes} {t('pendientes_label')}</span>}
+                {implementadas > 0 && <span className="text-accent-green"> · {implementadas} {t('implementadas_label')}</span>}
               </span>
             </div>
           </div>
@@ -278,7 +310,7 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
             size="session"
             isDeleting={isDeleting}
             onConfirm={handleDeleteSession}
-            label="Eliminar análisis completo"
+            label={t('eliminar_analisis_completo')}
           />
           <button
             onClick={e => { e.stopPropagation(); setOpen(!open); }}
@@ -308,11 +340,14 @@ function SessionGroup({ session, onUpdate, updatingId, onDeleteSession, onDelete
 }
 
 export default function RecommendationsHistory({ sessions, isLoading, notConfigured, error, onUpdate, onDelete, onDeleteRecord }) {
+  const { t, lang } = useLanguage();
   const [expanded, setExpanded] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingRecordId, setDeletingRecordId] = useState(null);
 
   if (notConfigured) return null;
+
+  const lastDate = sessions[0]?.date || null;
 
   const handleUpdate = async (id, estado, nota) => {
     setUpdatingId(id);
@@ -333,9 +368,9 @@ export default function RecommendationsHistory({ sessions, isLoading, notConfigu
           <div className="p-2 rounded-lg bg-dark-700">
             <History className="w-4 h-4 text-dark-400" />
           </div>
-          <h3 className="text-base font-semibold text-gray-100">Historial de Recomendaciones</h3>
+          <h3 className="text-base font-semibold text-gray-100">{t('historial_recomendaciones')}</h3>
           {sessions.length > 0 && (
-            <span className="text-xs px-2 py-0.5 bg-dark-700 text-dark-400 rounded-full">{sessions.length} sesiones</span>
+            <span className="text-xs px-2 py-0.5 bg-dark-700 text-dark-400 rounded-full">{sessions.length} {t('sesiones')}</span>
           )}
         </div>
         <button
@@ -349,14 +384,15 @@ export default function RecommendationsHistory({ sessions, isLoading, notConfigu
       {expanded && (
         <>
           {error && <p className="text-xs text-error/70 mb-3">{error}</p>}
+          {!isLoading && sessions.length > 0 && <LastAnalysisBanner lastDate={lastDate} t={t} lang={lang} />}
           {isLoading && (
             <div className="flex items-center gap-2 text-dark-400 text-sm py-4">
-              <Loader2 className="w-4 h-4 animate-spin" /> Cargando historial...
+              <Loader2 className="w-4 h-4 animate-spin" /> {t('cargando_historial')}
             </div>
           )}
           {!isLoading && sessions.length === 0 && (
             <p className="text-sm text-dark-500 py-4 text-center">
-              Aún no hay recomendaciones guardadas. Haz tu primer análisis IA.
+              {t('sin_recomendaciones')}
             </p>
           )}
           {!isLoading && sessions.length > 0 && (

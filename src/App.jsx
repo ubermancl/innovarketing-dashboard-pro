@@ -1,5 +1,6 @@
 import { useState, Component } from 'react';
 import { useAuth, AuthProvider } from './hooks/useAuth';
+import { LanguageProvider, useLanguage } from './hooks/useLanguage';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -43,6 +44,7 @@ import { SkeletonCard, SkeletonChart, SkeletonTable } from './components/ui/Skel
 
 function Dashboard() {
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const { businessContext } = useBusinessContext();
   const { recsConfigured } = useInstallerConfig();
   const [showSettings, setShowSettings] = useState(false);
@@ -108,7 +110,7 @@ function Dashboard() {
 
         {!isOnline && (
           <div className="p-3 glass-card border-warning/40 text-warning text-sm">
-            Sin conexión — mostrando última información guardada
+            {t('sin_conexion')}
           </div>
         )}
 
@@ -215,9 +217,11 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

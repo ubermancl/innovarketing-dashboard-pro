@@ -1,3 +1,5 @@
+import { useLanguage } from '../../hooks/useLanguage';
+
 // Estados CRM con colores para dark theme
 const CRM_STATE_COLORS = {
   'Nuevo Lead': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
@@ -53,9 +55,12 @@ const Badge = ({
   );
 };
 
-// Badge específico para estados CRM
+// Badge específico para estados CRM. `state` siempre es la clave real en
+// español (viene de NocoDB), se traduce solo lo que se muestra.
 export const CRMBadge = ({ state, size = 'md' }) => {
+  const { statusLabel } = useLanguage();
   const stateColor = CRM_STATE_COLORS[state] || 'bg-dark-600 text-gray-300 border border-dark-500';
+  const label = statusLabel(state);
 
   return (
     <span
@@ -65,7 +70,7 @@ export const CRMBadge = ({ state, size = 'md' }) => {
         ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs'}
       `}
     >
-      {state}
+      {label}
     </span>
   );
 };

@@ -9,30 +9,32 @@ import {
 import { Search, ChevronUp, ChevronDown, Download, ChevronLeft, ChevronRight, Eye, Users, X } from 'lucide-react';
 import { Card, Button, Select, CRMBadge, Modal } from './ui';
 import { formatDate, formatPhone, formatName, formatCurrency, formatDateTime } from '../utils/formatters';
+import { useLanguage } from '../hooks/useLanguage';
 
 // Modal de detalles del lead
 function LeadDetailModal({ lead, isOpen, onClose }) {
+  const { t } = useLanguage();
   if (!lead) return null;
 
   const sections = [
     {
-      title: 'Información Personal',
+      title: t('info_personal'),
       fields: [
-        { label: 'Nombre', value: formatName(lead.Nombre) },
-        { label: 'Teléfono', value: formatPhone(lead.Phone) },
-        { label: 'Email', value: lead.Email },
+        { label: t('nombre'), value: formatName(lead.Nombre) },
+        { label: t('telefono'), value: formatPhone(lead.Phone) },
+        { label: t('email'), value: lead.Email },
       ],
     },
     {
-      title: 'Estado',
+      title: t('estado_crm'),
       fields: [
-        { label: 'Estado CRM', value: lead['Estado CRM'], badge: true },
+        { label: t('estado_crm'), value: lead['Estado CRM'], badge: true },
         { label: 'Estado Agendamiento', value: lead['Estado Agendamiento'] },
-        { label: '¿Calificado?', value: lead['¿Calificado?'] ? 'Sí' : 'No' },
+        { label: t('calificado'), value: lead['¿Calificado?'] ? t('si') : t('no') },
       ],
     },
     {
-      title: 'Ubicación',
+      title: t('ubicacion'),
       fields: [
         { label: 'Distrito Residencia', value: lead['Distrito Residencia'] },
         { label: 'Distrito Trabajo', value: lead['Distrito Trabajo'] },
@@ -43,13 +45,13 @@ function LeadDetailModal({ lead, isOpen, onClose }) {
       fields: [
         { label: 'Fecha Agendamiento', value: formatDate(lead['Fecha de agendamiento']) },
         { label: 'Hora Cita', value: lead['Hora Cita'] },
-        { label: 'Confirmó Cita', value: lead['Confirmo Cita'] ? 'Sí' : 'No' },
+        { label: t('confirmo_cita'), value: lead['Confirmo Cita'] ? t('si') : t('no') },
       ],
     },
     {
       title: 'Ventas',
       fields: [
-        { label: 'Monto Venta', value: formatCurrency(lead['Monto Venta Cerrada (PEN)']) },
+        { label: t('monto_venta'), value: formatCurrency(lead['Monto Venta Cerrada (PEN)']) },
         { label: 'Plan Adquirido', value: lead['Plan Adquirido'] },
       ],
     },
@@ -57,7 +59,7 @@ function LeadDetailModal({ lead, isOpen, onClose }) {
       title: 'Fechas',
       fields: [
         { label: 'Creado', value: formatDateTime(lead['CreatedAt']) },
-        { label: 'Última Modificación', value: formatDateTime(lead['Última Modificación']) },
+        { label: t('ultima_modificacion'), value: formatDateTime(lead['Última Modificación']) },
       ],
     },
   ];
@@ -98,6 +100,7 @@ export default function Table({
   uniqueStatuses,
   uniqueDistricts,
 }) {
+  const { t, lang, statusLabel } = useLanguage();
   const [sorting, setSorting] = useState([{ id: 'CreatedAt', desc: true }]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -106,33 +109,33 @@ export default function Table({
   const columns = useMemo(() => [
     {
       accessorKey: 'Nombre',
-      header: 'Nombre',
+      header: t('nombre'),
       cell: ({ getValue }) => (
         <span className="font-medium text-gray-100">{formatName(getValue())}</span>
       ),
     },
     {
       accessorKey: 'Phone',
-      header: 'Teléfono',
+      header: t('telefono'),
       cell: ({ getValue }) => (
         <span className="font-mono text-sm text-gray-300">{formatPhone(getValue())}</span>
       ),
     },
     {
       accessorKey: 'Estado CRM',
-      header: 'Estado',
+      header: t('estado_label'),
       cell: ({ getValue }) => <CRMBadge state={getValue()} size="sm" />,
     },
     {
       accessorKey: 'Distrito Usado Para Calificar',
-      header: 'Distrito',
+      header: t('distrito'),
       cell: ({ getValue, row }) => (
         <span className="text-gray-400">{getValue() || row.original['Distrito Residencia'] || '-'}</span>
       ),
     },
     {
       accessorKey: 'CreatedAt',
-      header: 'Fecha',
+      header: t('fecha_creacion'),
       cell: ({ getValue }) => (
         <span className="text-gray-400">{formatDate(getValue())}</span>
       ),
@@ -153,7 +156,7 @@ export default function Table({
         </Button>
       ),
     },
-  ], []);
+  ], [lang]);
 
   // Configuración de la tabla
   const table = useReactTable({
@@ -211,7 +214,7 @@ export default function Table({
               <Users className="w-5 h-5 text-accent-cyan" />
             </div>
             <span className="font-semibold text-gray-100">
-              Leads
+              {t('leads_label')}
             </span>
             <span className="px-2 py-0.5 bg-dark-600 text-gray-300 text-xs rounded-full">
               {leads.length}
@@ -233,7 +236,7 @@ export default function Table({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     type="text"
-                    placeholder="Buscar por nombre o teléfono..."
+                    placeholder={t('buscar_placeholder')}
                     value={searchQuery}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 bg-dark-700 border border-dark-600 rounded-input text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
@@ -243,8 +246,8 @@ export default function Table({
                   value={statusFilter}
                   onChange={(e) => onStatusChange(e.target.value)}
                   options={[
-                    { value: '', label: 'Todos los estados' },
-                    ...uniqueStatuses.map(s => ({ value: s, label: s }))
+                    { value: '', label: t('todos_estados') },
+                    ...uniqueStatuses.map(s => ({ value: s, label: statusLabel(s) }))
                   ]}
                   className="w-full sm:w-44"
                 />
@@ -252,7 +255,7 @@ export default function Table({
                   value={districtFilter}
                   onChange={(e) => onDistrictChange(e.target.value)}
                   options={[
-                    { value: '', label: 'Todos los distritos' },
+                    { value: '', label: t('todos_distritos') },
                     ...uniqueDistricts.map(d => ({ value: d, label: d }))
                   ]}
                   className="w-full sm:w-44"
@@ -307,7 +310,7 @@ export default function Table({
             {/* Paginación */}
             <div className="p-4 border-t border-dark-600 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Mostrar:</span>
+                <span className="text-sm text-gray-500">{t('mostrar')}</span>
                 <Select
                   value={table.getState().pagination.pageSize}
                   onChange={(e) => table.setPageSize(Number(e.target.value))}
@@ -322,7 +325,7 @@ export default function Table({
 
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-400">
-                  Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+                  {t('pagina')} {table.getState().pagination.pageIndex + 1} {t('de')} {table.getPageCount()}
                 </span>
                 <div className="flex gap-1">
                   <Button
